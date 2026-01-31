@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, Link, Routes, Route, useLocation } from 'react-router-dom';
 import {
   Users, Building2, FileText, BarChart3, Settings, LogOut,
@@ -8,53 +7,27 @@ import {
   Lock, Eye, Trash2, Edit3, Calendar, UploadCloud, Info,
   Briefcase, Send, Target, Trash, ListTodo, Camera,
   User as UserIcon, Copy, AlertTriangle, CheckCircle, Newspaper,
-  Image as ImageIcon, Globe, Award, ChevronRight, FileCheck,
-  History, Filter, Phone, Scale, FileBadge, FileSignature, CheckSquare,
-  ShieldCheck, AlertCircle
+  Image as ImageIcon, Globe, Award, ChevronRight, FileCheck, Check,
+  MoreHorizontal, History, Filter, Phone, Scale, FileBadge, FileSignature, CheckSquare,
+  ShieldCheck, AlertCircle, ChevronLeft
 } from 'lucide-react';
 import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
+import { useAppContext } from '../context/AppContext';
 
 // --- Dashboard Sub-Components ---
 
 const Stats = ({ user }: { user: any }) => {
-  const [counts, setCounts] = useState({ members: 0, pending: 0, users: 0 });
+  const { hotels, profiles } = useAppContext();
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const { data: hotels, error: hotelError } = await supabase
-          .from('hotels')
-          .select('status');
-
-        if (hotelError) throw hotelError;
-
-        const { count: usersCount, error: usersError } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
-
-        if (usersError) throw usersError;
-
-        const approved = (hotels || []).filter(h => h.status === 'approved').length;
-        const pending = (hotels || []).filter(h => h.status === 'pending').length;
-
-        setCounts({
-          members: approved,
-          pending: pending,
-          users: usersCount || 0
-        });
-      } catch (err) {
-        console.error('Error fetching dashboard stats:', err);
-      }
-    };
-
-    fetchStats();
-  }, []);
+  const approvedCount = hotels.filter(h => h.status === 'approved').length;
+  const pendingCount = hotels.filter(h => h.status === 'pending').length;
+  const usersCount = profiles.length;
 
   const stats = [
-    { label: 'Total Members', value: counts.members.toString(), icon: <Hotel className="text-emerald-600" />, color: 'bg-emerald-50' },
-    { label: 'Pending Apps', value: counts.pending.toString(), icon: <FileText className="text-amber-600" />, color: 'bg-amber-50' },
-    { label: 'System Users', value: counts.users.toString(), icon: <Users className="text-indigo-600" />, color: 'bg-indigo-50' },
+    { label: 'Total Members', value: approvedCount.toString(), icon: <Hotel className="text-emerald-600" />, color: 'bg-emerald-50' },
+    { label: 'Pending Apps', value: pendingCount.toString(), icon: <FileText className="text-amber-600" />, color: 'bg-amber-50' },
+    { label: 'System Users', value: usersCount.toString(), icon: <Users className="text-indigo-600" />, color: 'bg-indigo-50' },
     { label: 'Avg Rating', value: '4.2', icon: <BarChart3 className="text-rose-600" />, color: 'bg-rose-50' },
   ];
 
@@ -77,302 +50,386 @@ const Stats = ({ user }: { user: any }) => {
 };
 
 const RecentActivity = () => {
-  const activities = [
-    { id: 1, type: 'registration', text: 'New application from "Bonthe Seaside Lodge"', time: '2 hours ago', icon: <FileText size={14} />, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { id: 2, type: 'approval', text: 'Admin approved "Gola Forest Lodge"', time: '5 hours ago', icon: <CheckCircle2 size={14} />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { id: 3, type: 'update', text: 'Radisson Blu updated their gallery', time: 'Yesterday', icon: <Hotel size={14} />, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { id: 4, type: 'user', text: 'New staff user added to Secretariat', time: '2 days ago', icon: <UserPlus size={14} />, color: 'text-rose-600', bg: 'bg-rose-50' },
-  ];
+  const { activities } = useAppContext();
+  const navigate = useNavigate();
+
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'registration': return <FileText size={14} />;
+      case 'approval': return <CheckCircle2 size={14} />;
+      case 'update': return <Hotel size={14} />;
+      case 'user': return <UserPlus size={14} />;
+      case 'event': return <Calendar size={14} />;
+      case 'news': return <Newspaper size={14} />;
+      default: return <Clock size={14} />;
+    }
+  };
+
+  const getColor = (type: string) => {
+    switch (type) {
+      case 'registration': return 'text-amber-600 bg-amber-50';
+      case 'approval': return 'text-emerald-600 bg-emerald-50';
+      case 'update': return 'text-indigo-600 bg-indigo-50';
+      case 'user': return 'text-rose-600 bg-rose-50';
+      default: return 'text-slate-600 bg-slate-50';
+    }
+  };
+
+  const displayActivities = activities.slice(0, 6);
 
   return (
     <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 h-full">
       <h3 className="text-lg font-bold text-slate-900 mb-6">Recent Activity</h3>
       <div className="space-y-6">
-        {activities.map((activity) => (
-          <div key={activity.id} className="flex items-start space-x-4">
-            <div className={`mt-1 p-2 rounded-lg ${activity.bg} ${activity.color}`}>
-              {activity.icon}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-800">{activity.text}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{activity.time}</p>
-            </div>
+        {displayActivities.length > 0 ? (
+          displayActivities.map((activity) => {
+            const colorClass = getColor(activity.type);
+            return (
+              <div key={activity.id} className="flex items-start space-x-4">
+                <div className={`mt-1 p-2 rounded-lg ${colorClass}`}>
+                  {getIcon(activity.type)}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-800">{activity.text}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{formatRelativeTime(activity.created_at)}</p>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="py-10 text-center text-slate-400">
+            <Clock size={24} className="mx-auto mb-2 opacity-20" />
+            <p className="text-sm font-medium">No recent logs</p>
           </div>
-        ))}
+        )}
       </div>
-      <button className="w-full mt-8 py-3 text-sm font-bold text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition-colors border-t border-slate-50">
+      <button
+        onClick={() => navigate('/dashboard/logs')}
+        className="w-full mt-8 py-3 text-sm font-bold text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition-colors border-t border-slate-50"
+      >
         View All Logs
       </button>
     </div>
   );
 };
 
-const ApplicationModal = ({ app, onClose, onApprove, onReject }: { app: any, onClose: () => void, onApprove: (id: string) => void, onReject: (id: string) => void }) => {
+const ApplicationModal = ({ app, onClose, onApprove, onReject, onMoveToPending, isProcessing }: {
+  app: any,
+  onClose: () => void,
+  onApprove: (id: string) => void,
+  onReject: (id: string) => void,
+  onMoveToPending: (id: string) => void,
+  isProcessing: boolean
+}) => {
   if (!app) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[95vh] flex flex-col">
         {/* Modal Header */}
-        <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
-          <div className="flex items-center space-x-3 md:space-x-4">
-            <div className="p-2 md:p-3 bg-emerald-100 text-emerald-700 rounded-2xl">
-              <FileCheck size={20} className="md:w-6 md:h-6" />
+        <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-lg">
+              <Hotel size={24} />
             </div>
             <div>
-              <h2 className="text-sm md:text-xl font-black text-slate-900 uppercase tracking-tight">Membership Review</h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {app.id}</p>
+              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{app.hotelName}</h2>
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{app.regNumber} • {app.status} application</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 md:p-3 hover:bg-slate-50 rounded-2xl text-slate-400 transition-all border border-transparent hover:border-slate-200">
-            <X size={20} />
+          <button onClick={onClose} className="p-3 hover:bg-white hover:text-rose-500 rounded-2xl transition-all border border-transparent hover:border-slate-100 shadow-sm">
+            <X size={24} />
           </button>
         </div>
 
-        {/* Modal Content - Matches Register.tsx Sections */}
-        <div className="flex-grow overflow-y-auto p-6 md:p-12 space-y-8 md:space-y-12 no-scrollbar bg-slate-50/30">
+        {/* Modal Body */}
+        <div className="flex-grow overflow-y-auto p-10 no-scrollbar space-y-12 bg-slate-50/30">
 
-          {/* SECTION A: Hotel Information */}
-          <section className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6 md:space-y-8">
-            <div className="flex items-center space-x-3 md:space-x-4 border-b border-slate-50 pb-4">
-              <Hotel className="text-emerald-600" size={18} />
-              <h3 className="text-[10px] md:text-xs font-black text-slate-900 uppercase tracking-[0.2em] md:tracking-[0.3em]">SECTION A: Hotel Information</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-              <div>
-                <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Hotel Name</p>
-                <p className="text-base md:text-lg font-bold text-slate-900">{app.hotelName}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Official Email Address</p>
-                <p className="text-lg font-bold text-slate-900">{app.email}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact Number</p>
-                <p className="text-lg font-bold text-slate-900">{app.contact || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Hotel Website</p>
-                <p className="text-lg font-bold text-slate-900">{app.website || 'N/A'}</p>
-              </div>
+          {/* Section A: Hotel Information */}
+          <section className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 pb-4 border-b border-slate-50 flex items-center">
+              <Info size={14} className="mr-2 text-emerald-500" /> SECTION A: Hotel Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="md:col-span-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Registered Address</p>
-                <p className="text-lg font-bold text-slate-900">{app.address}, {app.city}, {app.district}</p>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Registered Address</label>
+                <p className="font-bold text-slate-900 text-lg">{app.address}</p>
+              </div>
+              <div>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Location</label>
+                <p className="font-bold text-slate-900">{app.city}, {app.district}</p>
+              </div>
+              <div>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Official Email</label>
+                <p className="font-bold text-slate-700">{app.email}</p>
+              </div>
+              <div>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Contact Number</label>
+                <p className="font-bold text-slate-700">{app.contact}</p>
+              </div>
+              <div>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Official Website</label>
+                <p className="font-bold text-emerald-600">{app.website || 'N/A'}</p>
               </div>
             </div>
           </section>
 
-          {/* SECTION B: Ownership & Management */}
-          <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8">
-            <div className="flex items-center space-x-4 border-b border-slate-50 pb-4">
-              <Briefcase className="text-emerald-600" size={20} />
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.3em]">SECTION B: Ownership & Management</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+          {/* Section B: Ownership & Management */}
+          <section className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 pb-4 border-b border-slate-50 flex items-center">
+              <Users size={14} className="mr-2 text-emerald-500" /> SECTION B: Ownership & Management
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Owner / Proprietor Name</p>
-                <p className="text-lg font-bold text-slate-900">{app.owner}</p>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Owner / Proprietor</label>
+                <p className="font-bold text-slate-900">{app.owner}</p>
               </div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Managing Director / GM</p>
-                <p className="text-lg font-bold text-slate-900">{app.manager || 'N/A'}</p>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Managing Director / GM</label>
+                <p className="font-bold text-slate-900">{app.manager || 'N/A'}</p>
               </div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Business Registration #</p>
-                <p className="text-lg font-bold text-slate-900">{app.regNumber || 'N/A'}</p>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Business Reg #</label>
+                <p className="font-bold text-slate-900">{app.regNumber}</p>
               </div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Year Established</p>
-                <p className="text-lg font-bold text-slate-900">{app.year || 'N/A'}</p>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Year Established</label>
+                <p className="font-bold text-slate-900">{app.year}</p>
               </div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Employees</p>
-                <p className="text-lg font-bold text-slate-900">{app.employees || 'N/A'}</p>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Total Employees</label>
+                <p className="font-bold text-slate-900">{app.employees}</p>
               </div>
             </div>
           </section>
 
-          {/* SECTION C: Hotel Facilities & Classification */}
-          <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8">
-            <div className="flex items-center space-x-4 border-b border-slate-50 pb-4">
-              <Award className="text-emerald-600" size={20} />
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.3em]">SECTION C: Facilities & Classification</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              <div className="space-y-6">
+          {/* Section C: Facilities & Classification */}
+          <section className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 pb-4 border-b border-slate-50 flex items-center">
+              <Star size={14} className="mr-2 text-emerald-500" /> SECTION C: Facilities & Classification
+            </h3>
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Hotel Classification</p>
+                  <label className="block text-[8px] font-black text-slate-400 uppercase mb-4">Official Rating</label>
                   <div className="flex text-amber-400 space-x-1">
-                    {[...Array(parseInt(app.stars || 4))].map((_, i) => <Star key={i} size={18} fill="currentColor" />)}
+                    {[...Array(parseInt(app.stars || 4))].map((_, i) => <Star key={i} size={24} fill="currentColor" />)}
                   </div>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Room Count</p>
-                  <p className="text-3xl font-black text-slate-900 tracking-tighter">{app.rooms || '0'}</p>
+                  <label className="block text-[8px] font-black text-slate-400 uppercase mb-4">Room Count</label>
+                  <p className="text-3xl font-black text-slate-900 tracking-tighter">{app.rooms}</p>
                 </div>
               </div>
 
-              <div className="md:col-span-2 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Room Types Available</p>
+                  <label className="block text-[8px] font-black text-slate-400 uppercase mb-4">Room Types</label>
                   <div className="flex flex-wrap gap-2">
-                    {(app.roomTypes || ['Standard']).map((type: string) => (
-                      <span key={type} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase tracking-widest">{type}</span>
+                    {app.roomTypes?.map((type: string) => (
+                      <span key={type} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold uppercase tracking-widest">{type}</span>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">In-House Facilities</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {(app.facilities || ['Wi-Fi']).map((facility: string) => (
-                      <div key={facility} className="flex items-center p-3 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 text-xs font-bold">
-                        <CheckCircle2 size={14} className="mr-2 flex-shrink-0" />
-                        {facility}
-                      </div>
+                  <label className="block text-[8px] font-black text-slate-400 uppercase mb-4">In-House Facilities</label>
+                  <div className="flex flex-wrap gap-2">
+                    {app.facilities?.map((f: string) => (
+                      <span key={f} className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-emerald-100">{f}</span>
                     ))}
                   </div>
                 </div>
-                {app.otherAmenities && (
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Other Amenities</p>
-                    <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-2xl italic">{app.otherAmenities}</p>
-                  </div>
-                )}
               </div>
-            </div>
-          </section>
 
-          {/* SECTION D: Legal & Compliance */}
-          <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8">
-            <div className="flex items-center space-x-4 border-b border-slate-50 pb-4">
-              <Scale className="text-emerald-600" size={20} />
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.3em]">SECTION D: Legal & Compliance</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tax ID Number (TIN)</p>
-                <p className="text-lg font-bold text-slate-900">{app.tin || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">NTB License Number</p>
-                <p className="text-lg font-bold text-slate-900">{app.ntbLicense || 'N/A'}</p>
-              </div>
-              <div className="md:col-span-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Uploaded Certificates</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {[
-                    { label: 'Incorporation', key: 'certIncorporation' },
-                    { label: 'Business Reg', key: 'bizRegCert' },
-                    { label: 'Other Docs', key: 'otherCerts' }
-                  ].map((doc) => (
-                    <div key={doc.key} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <FileText className="text-emerald-600 mr-3" size={18} />
-                        <span className="text-xs font-bold text-slate-700">{doc.label}</span>
-                      </div>
-                      {app.documents?.[doc.key] ? (
-                        <button onClick={() => {
-                          const win = window.open();
-                          win?.document.write(`<iframe src="${app.documents[doc.key]}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
-                        }} className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline">View</button>
-                      ) : (
-                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Missing</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {app.complianceRemarks && (
-                <div className="md:col-span-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Compliance Remarks</p>
-                  <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-2xl">{app.complianceRemarks}</p>
+              {app.otherAmenities && (
+                <div>
+                  <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Other Amenities</label>
+                  <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-2xl italic">{app.otherAmenities}</p>
                 </div>
               )}
             </div>
           </section>
 
-          {/* SECTION E: Association Commitment */}
-          <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8">
-            <div className="flex items-center space-x-4 border-b border-slate-50 pb-4">
-              <FileSignature className="text-emerald-600" size={20} />
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.3em]">SECTION E: Association Commitment</h3>
+          {/* Section D: Legal & Compliance */}
+          <section className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 pb-4 border-b border-slate-100 flex items-center">
+              <Scale size={14} className="mr-2 text-emerald-500" /> SECTION D: Legal & Compliance
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 mb-8">
+              <div>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Tax ID Number (TIN)</label>
+                <p className="text-xl font-black text-slate-900 tracking-tight">{app.tin}</p>
+              </div>
+              <div>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">NTB License Number</label>
+                <p className="text-xl font-black text-slate-900 tracking-tight">{app.ntbLicense}</p>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-8">
-              <div className="md:col-span-3 bg-emerald-50/50 p-6 rounded-2xl italic text-slate-600 text-sm">
-                "By signing this form, I acknowledge that our hotel agrees to abide by the rules and regulations of the Sierra Leone Association of Hotels and commit to active participation in its activities."
+
+            <div className="space-y-4">
+              <label className="block text-[8px] font-black text-slate-400 uppercase mb-4">Submitted Documents</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {app.documents && Object.entries(app.documents).map(([key, url]) => (
+                  <a
+                    key={key}
+                    href={url as string}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-4 bg-slate-50 hover:bg-emerald-50 rounded-2xl group transition-all border border-slate-100"
+                  >
+                    <div className="flex items-center">
+                      <FileBadge className="text-slate-400 group-hover:text-emerald-500 mr-4 shrink-0" size={20} />
+                      <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                    </div>
+                    <Eye size={16} className="text-slate-300 group-hover:text-emerald-500" />
+                  </a>
+                ))}
               </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Signatory Name</p>
-                <p className="text-lg font-bold text-slate-900">{app.signeeName || 'N/A'}</p>
+            </div>
+
+            {app.complianceRemarks && (
+              <div className="mt-8">
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Compliance Remarks</label>
+                <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-2xl">{app.complianceRemarks}</p>
               </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Position</p>
-                <p className="text-lg font-bold text-slate-900">{app.signeePosition || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Submission Date</p>
-                <p className="text-lg font-bold text-slate-900">{app.signeeDate || app.date}</p>
+            )}
+          </section>
+
+          {/* Section E: Commitment */}
+          <section className="bg-slate-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl">
+            <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12">
+              <FileSignature size={200} />
+            </div>
+            <div className="relative z-10">
+              <h3 className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em] mb-8 pb-4 border-b border-white/10 flex items-center">
+                <ShieldCheck size={14} className="mr-2" /> SECTION E: Association Commitment
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div className="space-y-6">
+                  <p className="text-lg font-medium leading-relaxed text-white/80 italic">
+                    "By signing this form, I acknowledge that our hotel agrees to abide by the rules and regulations of the Sierra Leone Association of Hotels and commit to active participation in its activities."
+                  </p>
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+                      <CheckSquare size={20} className="text-emerald-400" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Electronically Verified</span>
+                  </div>
+                </div>
+                <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10 backdrop-blur-sm">
+                  <p className="text-[8px] font-black uppercase text-emerald-400 mb-2 tracking-widest">Digitally Signed By</p>
+                  <p className="text-2xl font-black uppercase tracking-tighter mb-1">{app.signeeName}</p>
+                  <p className="text-xs text-white/40 font-bold uppercase tracking-widest">
+                    {app.signeePosition} • {app.signeeDate}
+                  </p>
+                </div>
               </div>
             </div>
           </section>
 
-          {/* SECTION F: Hotel Gallery */}
-          <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8">
-            <div className="flex items-center space-x-4 border-b border-slate-50 pb-4">
-              <ImageIcon className="text-emerald-600" size={20} />
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.3em]">SECTION F: Property Showcase</h3>
-            </div>
-            {app.gallery && app.gallery.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {app.gallery.map((img: string, idx: number) => (
-                  <div key={idx} className="aspect-square rounded-2xl overflow-hidden border border-slate-100 shadow-sm group relative">
-                    <img src={img} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={`Gallery ${idx}`} />
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          {/* Section F: Property Showcase */}
+          <section className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 pb-4 border-b border-slate-50 flex items-center">
+              <ImageIcon size={14} className="mr-2 text-emerald-500" /> SECTION F: Property Showcase
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {app.gallery?.map((url: string, idx: number) => (
+                <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="group relative block aspect-square rounded-2xl overflow-hidden border border-slate-100 hover:border-emerald-500 transition-all shadow-sm">
+                  <img src={url} alt={`Gallery ${idx}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Eye size={24} className="text-white transform scale-50 group-hover:scale-100 transition-transform" />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-12 text-center border-2 border-dashed border-slate-100 rounded-[2rem]">
-                <ImageIcon size={48} className="text-slate-100 mx-auto mb-4" />
-                <p className="text-slate-300 font-bold uppercase tracking-widest text-[10px]">No gallery images provided with application</p>
-              </div>
-            )}
+                </a>
+              ))}
+              {(!app.gallery || app.gallery.length === 0) && (
+                <div className="col-span-full py-16 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center">
+                  <ImageIcon size={48} className="text-slate-200 mb-4" />
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No Property Images Provided</p>
+                </div>
+              )}
+            </div>
           </section>
         </div>
 
         {/* Modal Footer */}
-        <div className="p-8 border-t border-slate-100 bg-white sticky bottom-0 flex justify-between items-center z-10">
-          <div className="flex flex-col">
-            <div className="flex items-center text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">
-              <Clock size={14} className="mr-2" /> Current Application Status
-            </div>
-            <span className={`text-sm font-black uppercase tracking-[0.1em] ${app.status === 'approved' ? 'text-emerald-600' :
-              app.status === 'rejected' ? 'text-rose-600' : 'text-amber-600'
-              }`}>
-              {app.status.toUpperCase()}
-            </span>
-          </div>
-
-          <div className="flex space-x-4">
+        <div className="p-8 border-t border-slate-50 bg-white shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)]">
+          <div className="flex flex-col sm:flex-row justify-end items-center gap-4">
             {app.status === 'pending' && (
               <>
                 <button
-                  onClick={() => { onReject(app.id); onClose(); }}
-                  className="px-8 py-3 bg-white border border-slate-200 text-rose-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-rose-50 hover:border-rose-100 transition-all"
+                  disabled={isProcessing}
+                  onClick={() => onReject(app.id)}
+                  className="w-full sm:w-auto px-8 py-3 bg-white text-rose-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-rose-50 transition-all border border-slate-200 hover:border-rose-200 disabled:opacity-50"
                 >
-                  Deny Membership
+                  {isProcessing ? 'Processing...' : 'Deny Membership'}
                 </button>
                 <button
-                  onClick={() => { onApprove(app.id); onClose(); }}
-                  className="px-12 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-emerald-900/20 flex items-center"
+                  disabled={isProcessing}
+                  onClick={() => onApprove(app.id)}
+                  className="w-full sm:w-auto px-12 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-emerald-900/20 flex items-center justify-center disabled:opacity-50"
                 >
-                  <CheckCircle size={16} className="mr-2" /> Approve Membership
+                  {isProcessing ? (
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
+                  ) : (
+                    <CheckCircle size={16} className="mr-2" />
+                  )}
+                  {isProcessing ? 'Processing Approval...' : 'Approve Membership'}
+                </button>
+              </>
+            )}
+            {app.status === 'rejected' && (
+              <>
+                <button
+                  disabled={isProcessing}
+                  onClick={() => onMoveToPending(app.id)}
+                  className="w-full sm:w-auto px-8 py-3 bg-white text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all border border-slate-200 disabled:opacity-50"
+                >
+                  {isProcessing ? 'Processing...' : 'Restore to Pending'}
+                </button>
+                <button
+                  disabled={isProcessing}
+                  onClick={() => onApprove(app.id)}
+                  className="w-full sm:w-auto px-12 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-emerald-900/20 flex items-center justify-center disabled:opacity-50"
+                >
+                  <CheckCircle size={16} className="mr-2" />
+                  Approve Application
+                </button>
+              </>
+            )}
+            {app.status === 'approved' && (
+              <>
+                <button
+                  disabled={isProcessing}
+                  onClick={() => onMoveToPending(app.id)}
+                  className="w-full sm:w-auto px-8 py-3 bg-white text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all border border-slate-200 disabled:opacity-50"
+                >
+                  {isProcessing ? 'Processing...' : 'Move to Pending'}
+                </button>
+                <button
+                  disabled={isProcessing}
+                  onClick={() => onReject(app.id)}
+                  className="w-full sm:w-auto px-8 py-3 bg-white text-rose-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-rose-50 transition-all border border-slate-200 hover:border-rose-200 disabled:opacity-50"
+                >
+                  {isProcessing ? 'Processing...' : 'Reject Application'}
                 </button>
               </>
             )}
             <button
+              disabled={isProcessing}
               onClick={onClose}
-              className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-800 transition-all"
+              className="w-full sm:w-auto px-8 py-3 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-50"
             >
               Close Record
             </button>
@@ -384,69 +441,188 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject }: { app: any, onC
 };
 
 const Applications = () => {
-  const [apps, setApps] = useState<any[]>([]);
+  const { hotels: rawHotels, refreshData, showNotification } = useAppContext();
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    const fetchApps = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('hotels')
-          .select('*')
-          .order('created_at', { ascending: false });
+  const apps = useMemo(() => (rawHotels || []).map((m: any) => ({
+    ...m,
+    hotelName: m.hotel_name,
+    date: new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    regNumber: m.reg_number,
+    year: m.year_established?.toString(),
+    manager: m.manager,
+    employees: m.employees,
+    rooms: m.rooms,
+    roomTypes: m.room_types,
+    facilities: m.facilities,
+    otherAmenities: m.other_amenities,
+    tin: m.tin,
+    ntbLicense: m.ntb_license,
+    complianceRemarks: m.compliance_remarks,
+    signeeName: m.signee_name,
+    signeePosition: m.signee_position,
+    signeeDate: m.signee_date
+  })), [rawHotels]);
 
-        if (error) throw error;
+  const handleMoveToPending = async (id: string) => {
+    console.log('[DEBUG] handleMoveToPending started for ID:', id);
+    setProcessing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Authentication session lost.');
 
-        // Map database fields to UI expectations
-        const formatted = (data || []).map((m: any) => ({
-          ...m,
-          hotelName: m.hotel_name,
-          date: new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          regNumber: m.reg_number,
-          year: m.year_established?.toString()
-        }));
-
-        setApps(formatted);
-      } catch (err) {
-        console.error('Error fetching applications:', err);
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'super-admin')) {
+        throw new Error('Insufficient permissions.');
       }
-    };
 
-    fetchApps();
-  }, []);
+      const { data, error } = await supabase.from('hotels').update({ status: 'pending' }).eq('id', id).select();
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('Update failed.');
+
+      await supabase.from('activities').insert({
+        type: 'update',
+        text: `Admin moved "${apps.find(a => a.id === id)?.hotelName}" back to Pending`,
+        user_id: session.user.id
+      });
+
+      await refreshData();
+      showNotification('Application moved back to Pending.', 'info');
+      setSelectedApp(null);
+    } catch (err: any) {
+      console.error('Error moving to pending:', err);
+      showNotification('Error: ' + err.message, 'error');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const handleApprove = async (id: string) => {
+    console.log('[DEBUG] handleApprove started for ID:', id);
+    setProcessing(true);
     try {
-      const { error } = await supabase
+      // 1. Verify Session & Permissions
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('[DEBUG] Current session user:', session?.user?.id, session?.user?.email);
+
+      if (!session) {
+        throw new Error('Authentication session lost. Please log in again.');
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      console.log('[DEBUG] DB Profile Role:', profile?.role);
+
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'super-admin')) {
+        console.error('[DEBUG] Insufficient role in DB:', profile?.role);
+        throw new Error('Your account permissions in the database do not allow this action.');
+      }
+
+      // 2. Perform Update
+      const { data, error } = await supabase
         .from('hotels')
         .update({ status: 'approved' })
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
-      if (error) throw error;
+      console.log('[DEBUG] Update response:', { data, error });
 
-      setApps(apps.map(app => app.id === id ? { ...app, status: 'approved' } : app));
-      alert('Membership Approved. Hotel profile is now live in the directory.');
+      if (error) {
+        console.error('[DEBUG] Supabase error:', error);
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('[DEBUG] No rows updated. Checking if record exists...');
+        const { data: checkData } = await supabase.from('hotels').select('id, status').eq('id', id).single();
+        console.log('[DEBUG] Existing record status:', checkData);
+        throw new Error('Update failed. You may not have permission to modify this record or the record does not exist.');
+      }
+
+      // Log activity
+      const activityResult = await supabase.from('activities').insert({
+        type: 'approval',
+        text: `Admin approved "${apps.find(a => a.id === id)?.hotelName || 'a hotel'}"`,
+        user_id: session.user.id
+      });
+      console.log('Activity log response:', activityResult);
+
+      await refreshData();
+      showNotification('Membership Approved. Hotel profile is now live in the directory.', 'success');
+      setSelectedApp(null); // Close modal on success
+      setActiveTab('approved'); // Auto-switch to Approved tab
     } catch (err: any) {
-      console.error('Error approving application:', err.message);
-      alert('Error updating application status.');
+      console.error('CRITICAL: Error approving application:', err);
+      showNotification('Error updating application status: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+      setProcessing(false);
     }
   };
 
   const handleReject = async (id: string) => {
+    console.log('[DEBUG] handleReject started for ID:', id);
+    setProcessing(true);
     try {
-      const { error } = await supabase
+      // 1. Verify Session & Permissions
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Authentication session lost. Please log in again.');
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      console.log('[DEBUG] DB Profile Role:', profile?.role);
+
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'super-admin')) {
+        console.error('[DEBUG] Insufficient role in DB:', profile?.role);
+        throw new Error('Your account permissions in the database do not allow this action.');
+      }
+
+      // 2. Perform Update
+      const { data, error } = await supabase
         .from('hotels')
         .update({ status: 'rejected' })
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
-      if (error) throw error;
+      console.log('[DEBUG] Update response:', { data, error });
 
-      setApps(apps.map(app => app.id === id ? { ...app, status: 'rejected' } : app));
-      alert('Application Rejected.');
+      if (error) {
+        console.error('[DEBUG] Supabase error:', error);
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error('Update failed. You may not have permission to modify this record or the record does not exist.');
+      }
+
+      // Log activity
+      const activityResult = await supabase.from('activities').insert({
+        type: 'rejection',
+        text: `Admin rejected application from "${apps.find(a => a.id === id)?.hotelName || 'a hotel'}"`,
+        user_id: session.user.id
+      });
+      console.log('Activity log response:', activityResult);
+
+      await refreshData();
+      showNotification('Application Rejected.', 'info');
+      setSelectedApp(null); // Close modal on success
+      setActiveTab('rejected'); // Auto-switch to Rejected tab
     } catch (err: any) {
-      console.error('Error rejecting application:', err.message);
-      alert('Error updating application status.');
+      console.error('CRITICAL: Error rejecting application:', err);
+      showNotification('Error updating application status: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -529,8 +705,18 @@ const Applications = () => {
                           }`}
                       >
                         <Eye size={14} className="mr-2" />
-                        {app.status === 'pending' ? 'Review & Approve' : 'View Archive'}
+                        {app.status === 'pending' ? 'Review & Approve' : app.status === 'rejected' ? 'Restore / Approve' : 'View Archive'}
                       </button>
+                      {app.status === 'rejected' && (
+                        <button
+                          disabled={processing}
+                          onClick={() => handleMoveToPending(app.id)}
+                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                          title="Restore to Pending"
+                        >
+                          <History size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -575,39 +761,18 @@ const Applications = () => {
         </div>
       )}
 
-      {selectedApp && <ApplicationModal app={selectedApp} onClose={() => setSelectedApp(null)} onApprove={handleApprove} onReject={handleReject} />}
+      {selectedApp && <ApplicationModal app={selectedApp} onClose={() => setSelectedApp(null)} onApprove={handleApprove} onReject={handleReject} onMoveToPending={handleMoveToPending} isProcessing={processing} />}
     </div>
   );
 };
 
 const MembersManagement = () => {
-  const [members, setMembers] = useState<any[]>([]);
+  const { members: rawMembers } = useAppContext();
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('hotels')
-          .select('*')
-          .eq('status', 'approved')
-          .order('hotel_name');
-
-        if (error) throw error;
-
-        // Map database fields to UI expectations
-        const formatted = (data || []).map((m: any) => ({
-          ...m,
-          hotelName: m.hotel_name
-        }));
-
-        setMembers(formatted);
-      } catch (err) {
-        console.error('Error fetching members management:', err);
-      }
-    };
-
-    fetchMembers();
-  }, []);
+  const members = useMemo(() => (rawMembers || []).map((m: any) => ({
+    ...m,
+    hotelName: m.hotel_name
+  })), [rawMembers]);
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-slate-100">
@@ -671,18 +836,23 @@ const MembersManagement = () => {
 };
 
 const UserManagement = () => {
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { profiles: users, loading, refreshData, showNotification } = useAppContext();
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'admin' });
   const [creating, setCreating] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [passwordTarget, setPasswordTarget] = useState<any>(null);
+  const [newForcedPassword, setNewForcedPassword] = useState('');
+  const [settingPassword, setSettingPassword] = useState(false);
+  const [roleTarget, setRoleTarget] = useState<any>(null);
+  const [updatingRole, setUpdatingRole] = useState(false);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const { user: currentUser } = useAppContext();
+
+  // We no longer need fetchUsers locally
 
   const handleToggleSecurity = async (userId: string, currentStatus: boolean) => {
-    if (!window.confirm(`Are you sure you want to mark this account as ${currentStatus ? 'Pending Change' : 'Secure'} manually?`)) return;
+    if (!window.confirm(`Are you sure you want to mark this account as ${currentStatus ? 'Pending Change' : 'Secure'} manually ? `)) return;
 
     try {
       const { error } = await supabase
@@ -691,27 +861,32 @@ const UserManagement = () => {
         .eq('id', userId);
 
       if (error) throw error;
-      setUsers(users.map(u => u.id === userId ? { ...u, password_changed: !currentStatus } : u));
+
+      // Log activity
+      await supabase.from('activities').insert({
+        type: 'update',
+        text: `Manually updated security status for ${users.find(u => u.id === userId)?.name || 'a user'}`
+      });
+
+      await refreshData();
+      showNotification(`Account marked as ${currentStatus ? 'Pending' : 'Secure'}.`, 'success');
     } catch (err: any) {
       console.error('Error toggling security status:', err.message);
-      alert('Error: ' + err.message);
+      showNotification('Error: ' + err.message, 'error');
     }
   };
 
-  const fetchUsers = async () => {
-    setLoading(true);
+  const handleAdminResetPassword = async (userEmail: string) => {
+    if (!window.confirm(`Send a password reset link to ${userEmail}?`)) return;
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('role', { ascending: false });
-
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: `${window.location.origin}/login`,
+      });
       if (error) throw error;
-      setUsers(data || []);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-    } finally {
-      setLoading(false);
+      showNotification('Password reset link sent successfully.', 'success');
+    } catch (err: any) {
+      console.error('Admin reset error:', err);
+      showNotification('Failed to send reset link: ' + err.message, 'error');
     }
   };
 
@@ -733,15 +908,98 @@ const UserManagement = () => {
 
       if (error) throw error;
 
-      alert('User account created successfully! The user can now log in with their temporary credentials.');
+      // Log activity
+      await supabase.from('activities').insert({
+        type: 'user',
+        text: `Created new user account: ${newUser.name} (${newUser.role})`
+      });
+
+      showNotification('User account created successfully!', 'success');
       setShowAddUser(false);
       setNewUser({ name: '', email: '', password: '', role: 'admin' });
-      fetchUsers();
+      await refreshData();
     } catch (err: any) {
       console.error('Error creating user:', err.message);
-      alert('Error creating user: ' + err.message);
+      showNotification('Error creating user: ' + err.message, 'error');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleForcedPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordTarget) return;
+    if (newForcedPassword.length < 6) {
+      showNotification('Password must be at least 6 characters', 'warning');
+      return;
+    }
+
+    setSettingPassword(true);
+    try {
+      // 1. Call the edge function or admin api
+      // Note: Since client-side anon key cannot update other users, 
+      // we use an Edge Function "admin-change-password" (Vite Force Refresh Tag)
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        showNotification('Your session has expired or is invalid. Please sign out and sign in again.', 'error');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('admin-change-password', {
+        body: { userId: passwordTarget.id, newPassword: newForcedPassword }
+      });
+
+      if (error) {
+        // Handle specific error from Edge Function
+        const errorMsg = error.message || 'Unknown error occurred';
+        showNotification(`Error: ${errorMsg}`, 'error');
+        return;
+      }
+
+      showNotification(`Password for ${passwordTarget.name || passwordTarget.email} updated successfully.`, 'success');
+
+      // Log activity
+      await supabase.from('activities').insert({
+        type: 'user',
+        text: `Forced password reset for ${passwordTarget.name || passwordTarget.email}`
+      });
+
+      setPasswordTarget(null);
+      setNewForcedPassword('');
+      await refreshData();
+    } catch (err: any) {
+      console.error('Error setting forced password:', err);
+      showNotification('Error updating password. (Ensure Edge Function is deployed)', 'error');
+    } finally {
+      setSettingPassword(false);
+    }
+  };
+
+  const handleUpdateRole = async (userId: string, newRole: string) => {
+    setUpdatingRole(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      // Log activity
+      await supabase.from('activities').insert({
+        type: 'user',
+        text: `Updated role for ${users.find(u => u.id === userId)?.name || 'a user'} to ${newRole}`,
+        user_id: currentUser?.id
+      });
+
+      showNotification(`Role updated to ${newRole} successfully.`, 'success');
+      setRoleTarget(null);
+      await refreshData();
+    } catch (err: any) {
+      console.error('Error updating role:', err.message);
+      showNotification('Error updating role: ' + err.message, 'error');
+    } finally {
+      setUpdatingRole(false);
     }
   };
 
@@ -792,7 +1050,7 @@ const UserManagement = () => {
               <UserPlus size={16} className="mr-2" /> New User
             </button>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-[450px]">
             <table className="w-full text-left min-w-[500px]">
               <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
                 <tr>
@@ -835,7 +1093,65 @@ const UserManagement = () => {
                       )}
                     </td>
                     <td className="px-4 md:px-8 py-4 text-right">
-                      <button className="text-slate-400 hover:text-emerald-600 font-bold text-[10px] uppercase tracking-widest">Manage</button>
+                      <div className="flex justify-end relative" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === u.id ? null : u.id)}
+                          className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                        >
+                          <MoreHorizontal size={20} />
+                        </button>
+
+                        {openMenuId === u.id && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-[60]"
+                              onClick={() => setOpenMenuId(null)}
+                            ></div>
+                            <div className="absolute right-0 top-12 w-56 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 py-4 z-[70] animate-in fade-in zoom-in-95 duration-200 origin-top-right ring-8 ring-white">
+                              <div className="px-6 pb-3 border-b border-slate-50 mb-2">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">User Actions</p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  handleAdminResetPassword(u.email);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 flex items-center transition-all group"
+                              >
+                                <History size={16} className="mr-3 text-slate-400 group-hover:text-amber-500" /> Reset Password
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setPasswordTarget(u);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 flex items-center transition-all group"
+                              >
+                                <Lock size={16} className="mr-3 text-slate-400 group-hover:text-indigo-500" /> Set Forced Password
+                              </button>
+                              {currentUser?.role === 'super-admin' && (
+                                <button
+                                  onClick={() => {
+                                    setRoleTarget(u);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 flex items-center transition-all group"
+                                >
+                                  <Settings size={16} className="mr-3 text-slate-400 group-hover:text-emerald-500" /> Manage Permissions
+                                </button>
+                              )}
+                              <div className="mt-2 px-4">
+                                <button
+                                  onClick={() => setOpenMenuId(null)}
+                                  className="w-full py-2 bg-slate-50 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-100 transition-colors"
+                                >
+                                  Close Menu
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -844,24 +1160,156 @@ const UserManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Forced Password Modal */}
+      {/* Forced Password Modal (Existing) */}
+      {passwordTarget && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setPasswordTarget(null)}></div>
+          <div className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-8">
+              <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl">
+                <Lock size={24} />
+              </div>
+              <button
+                onClick={() => setPasswordTarget(null)}
+                className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400"
+              >
+                <X />
+              </button>
+            </div>
+
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">Set Forced Password</h3>
+            <p className="text-slate-500 text-sm mb-8 font-medium italic">
+              Updating password for <span className="text-slate-900 font-bold">{passwordTarget.name || passwordTarget.email}</span>. The user will be required to change this upon login.
+            </p>
+
+            <form onSubmit={handleForcedPasswordReset} className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">New Temporary Password</label>
+                <input
+                  required
+                  type="text"
+                  value={newForcedPassword}
+                  onChange={e => setNewForcedPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold"
+                />
+              </div>
+
+              <div className="pt-4 flex flex-col gap-3">
+                <button
+                  disabled={settingPassword}
+                  type="submit"
+                  className="w-full bg-slate-900 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-slate-900/20 hover:bg-emerald-600 transition-all disabled:opacity-50 flex items-center justify-center"
+                >
+                  {settingPassword ? 'Updating System...' : 'Enforce New Password'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPasswordTarget(null)}
+                  className="w-full py-4 text-slate-400 font-black uppercase tracking-widest text-[9px] hover:text-slate-600"
+                >
+                  Cancel Action
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Role Management Modal (New) */}
+      {roleTarget && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setRoleTarget(null)}></div>
+          <div className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-8">
+              <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl">
+                <ShieldCheck size={24} />
+              </div>
+              <button
+                onClick={() => setRoleTarget(null)}
+                className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400"
+              >
+                <X />
+              </button>
+            </div>
+
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">Update User Role</h3>
+            <p className="text-slate-500 text-sm mb-8 font-medium italic">
+              Changing permissions for <span className="text-slate-900 font-bold">{roleTarget.name || roleTarget.email}</span>.
+            </p>
+
+            <div className="space-y-4">
+              {['member', 'admin', 'super-admin'].map((role) => (
+                <button
+                  key={role}
+                  disabled={updatingRole}
+                  onClick={() => handleUpdateRole(roleTarget.id, role)}
+                  className={`w-full p-6 rounded-2xl border-2 text-left transition-all flex items-center justify-between group ${roleTarget.role === role
+                    ? 'border-emerald-500 bg-emerald-50/50'
+                    : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                    }`}
+                >
+                  <div>
+                    <div className={`text-xs font-black uppercase tracking-widest mb-1 ${roleTarget.role === role ? 'text-emerald-700' : 'text-slate-900'}`}>
+                      {role.replace('-', ' ')}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-bold">
+                      {role === 'super-admin' && 'Full system access & user management'}
+                      {role === 'admin' && 'Manage hotel directory & content'}
+                      {role === 'member' && 'Limited hotel portal access'}
+                    </div>
+                  </div>
+                  {roleTarget.role === role && (
+                    <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                  )}
+                  {roleTarget.role !== role && (
+                    <div className="h-2 w-2 rounded-full bg-slate-200 group-hover:bg-slate-300"></div>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-8">
+              <button
+                type="button"
+                onClick={() => setRoleTarget(null)}
+                className="w-full py-4 text-slate-400 font-black uppercase tracking-widest text-[9px] hover:text-slate-600"
+              >
+                Cancel Action
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 const EventsManagement = () => {
+  const { events: contextEvents, refreshData, showNotification } = useAppContext();
   const [events, setEvents] = useState<any[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [viewingEvent, setViewingEvent] = useState<any>(null);
 
+  // Synchronize local events state with context events
+  useEffect(() => {
+    setEvents(contextEvents);
+  }, [contextEvents]);
+
   const initialFormState = {
     title: '',
-    location: '',
     description: '',
     fullContent: '',
+    full_content: '',
+    location: '',
     category: 'Corporate',
-    status: 'Published',
+    status: 'Draft',
     image: '',
+    date: '',
+    time: '',
     schedule: [{ date: '', time: '', agenda: [{ time: '', activity: '' }] }],
     speakers: [{ name: '', role: '', image: '' }]
   };
@@ -869,21 +1317,22 @@ const EventsManagement = () => {
   const [formEvent, setFormEvent] = useState(initialFormState);
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('events')
-          .select('*')
-          .order('date', { ascending: false });
+    // This useEffect is no longer needed as events are synced from context
+    // const fetchEvents = async () => {
+    //   try {
+    //     const { data, error } = await supabase
+    //       .from('events')
+    //       .select('*')
+    //       .order('date', { ascending: false });
 
-        if (error) throw error;
-        setEvents(data || []);
-      } catch (err) {
-        console.error('Error fetching events management:', err);
-      }
-    };
+    //     if (error) throw error;
+    //     setEvents(data || []);
+    //   } catch (err) {
+    //     console.error('Error fetching events management:', err);
+    //   }
+    // };
 
-    fetchEvents();
+    // fetchEvents();
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -895,10 +1344,18 @@ const EventsManagement = () => {
           .eq('id', id);
 
         if (error) throw error;
-        setEvents(events.filter(e => e.id !== id));
+
+        // Log activity
+        await supabase.from('activities').insert({
+          type: 'event',
+          text: `Deleted event: "${events.find(e => e.id === id)?.title || 'an event'}"`
+        });
+
+        refreshData();
+        showNotification('Event deleted successfully.', 'success');
       } catch (err: any) {
         console.error('Error deleting event:', err.message);
-        alert('Error deleting event.');
+        showNotification('Error deleting event.', 'error');
       }
     }
   };
@@ -925,11 +1382,18 @@ const EventsManagement = () => {
         .select();
 
       if (error) throw error;
-      setEvents([data[0], ...events]);
-      alert(`A copy of "${event.title}" has been created as a draft.`);
+
+      // Log activity
+      await supabase.from('activities').insert({
+        type: 'event',
+        text: `Duplicated event: "${event.title}"`
+      });
+
+      refreshData();
+      showNotification(`A copy of "${event.title}" has been created as a draft.`, 'success');
     } catch (err: any) {
       console.error('Error duplicating event:', err.message);
-      alert('Error duplicating event.');
+      showNotification('Error duplicating event.', 'error');
     }
   };
 
@@ -942,10 +1406,18 @@ const EventsManagement = () => {
           .eq('id', id);
 
         if (error) throw error;
-        setEvents(events.map(e => e.id === id ? { ...e, status: 'Published' } : e));
+
+        // Log activity
+        await supabase.from('activities').insert({
+          type: 'event',
+          text: `Published event: "${events.find(e => e.id === id)?.title || 'an event'}"`
+        });
+
+        refreshData();
+        showNotification('Event published successfully!', 'success');
       } catch (err: any) {
         console.error('Error publishing event:', err.message);
-        alert('Error publishing event.');
+        showNotification('Error publishing event.', 'error');
       }
     }
   };
@@ -1059,20 +1531,35 @@ const EventsManagement = () => {
           .eq('id', editingEventId);
 
         if (error) throw error;
-        setEvents(events.map(ev => ev.id === editingEventId ? { ...ev, ...eventPayload } : ev));
+
+        // Log activity
+        await supabase.from('activities').insert({
+          type: 'event',
+          text: `${editingEventId ? 'Updated' : 'Created'} event: "${eventPayload.title}"`
+        });
+
+        refreshData();
+        showNotification(`Event ${editingEventId ? 'updated' : 'created'} successfully!`, 'success');
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('events')
-          .insert([eventPayload])
-          .select();
+          .insert([eventPayload]);
 
         if (error) throw error;
-        setEvents([data[0], ...events]);
+
+        // Log activity
+        await supabase.from('activities').insert({
+          type: 'event',
+          text: `Created new event: "${eventPayload.title}"`
+        });
+
+        refreshData();
+        showNotification('New event created successfully!', 'success');
       }
       closeForm();
     } catch (err: any) {
       console.error('Error saving event:', err.message);
-      alert('Error saving event.');
+      showNotification('Error saving event.', 'error');
     }
   };
 
@@ -1563,10 +2050,16 @@ const EventsManagement = () => {
 };
 
 const NewsManagement = () => {
+  const { news: contextNews, refreshData, showNotification } = useAppContext();
   const [news, setNews] = useState<any[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const featureImageRef = useRef<HTMLInputElement>(null);
+
+  // Synchronize local news state with context news
+  useEffect(() => {
+    setNews(contextNews);
+  }, [contextNews]);
 
   const initialForm = {
     title: '',
@@ -1580,24 +2073,6 @@ const NewsManagement = () => {
   };
 
   const [formNews, setFormNews] = useState(initialForm);
-
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('news')
-          .select('*')
-          .order('date', { ascending: false });
-
-        if (error) throw error;
-        setNews(data || []);
-      } catch (err) {
-        console.error('Error fetching news management:', err);
-      }
-    };
-
-    fetchNews();
-  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1622,22 +2097,37 @@ const NewsManagement = () => {
           .eq('id', editingId);
 
         if (error) throw error;
-        setNews(news.map(n => n.id === editingId ? { ...n, ...entryToSave } : n));
+
+        // Log activity
+        await supabase.from('activities').insert({
+          type: 'news',
+          text: `Updated news article: "${entryToSave.title}"`
+        });
+
+        refreshData();
+        showNotification('Article updated successfully!', 'success');
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('news')
-          .insert([entryToSave])
-          .select();
+          .insert([entryToSave]);
 
         if (error) throw error;
-        setNews([data[0], ...news]);
+
+        // Log activity
+        await supabase.from('activities').insert({
+          type: 'news',
+          text: `Published new article: "${entryToSave.title}"`
+        });
+
+        refreshData();
+        showNotification('Article published successfully!', 'success');
       }
       setShowAddForm(false);
       setEditingId(null);
       setFormNews(initialForm);
     } catch (err: any) {
       console.error('Error saving news:', err.message);
-      alert('Error saving article.');
+      showNotification('Error saving news.', 'error');
     }
   };
 
@@ -1650,10 +2140,18 @@ const NewsManagement = () => {
           .eq('id', id);
 
         if (error) throw error;
-        setNews(news.filter(n => n.id !== id));
+
+        // Log activity
+        await supabase.from('activities').insert({
+          type: 'news',
+          text: `Deleted news article: "${news.find(n => n.id === id)?.title || 'an article'}"`
+        });
+
+        refreshData();
+        showNotification('News article deleted.', 'success');
       } catch (err: any) {
         console.error('Error deleting news:', err.message);
-        alert('Error deleting article.');
+        showNotification('Error deleting news.', 'error');
       }
     }
   };
@@ -1783,7 +2281,167 @@ const NewsManagement = () => {
   );
 };
 
+const ActivityLogs = () => {
+  const { activities: initialActivities, showNotification } = useAppContext();
+  const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('activities')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      setActivities(data || []);
+    } catch (err: any) {
+      console.error('Error fetching logs:', err.message);
+      showNotification('Error fetching activity logs', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const filteredActivities = activities.filter(activity => {
+    const matchesFilter = filter === 'all' || activity.type === filter;
+    const matchesSearch = activity.text.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'registration': return <FileText size={16} />;
+      case 'approval': return <CheckCircle2 size={16} />;
+      case 'update': return <Hotel size={16} />;
+      case 'user': return <UserPlus size={16} />;
+      case 'event': return <Calendar size={16} />;
+      case 'news': return <Newspaper size={16} />;
+      default: return <History size={16} />;
+    }
+  };
+
+  const getColor = (type: string) => {
+    switch (type) {
+      case 'registration': return 'text-amber-600 bg-amber-50';
+      case 'approval': return 'text-emerald-600 bg-emerald-50';
+      case 'update': return 'text-indigo-600 bg-indigo-50';
+      case 'user': return 'text-rose-600 bg-rose-50';
+      case 'event': return 'text-blue-600 bg-blue-50';
+      case 'news': return 'text-slate-600 bg-slate-50';
+      default: return 'text-slate-600 bg-slate-50';
+    }
+  };
+
+  const formatFullTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-4">
+            <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl">
+              <History size={24} />
+            </div>
+            Recent Activity Logs
+          </h2>
+          <p className="text-slate-500 mt-1">Complete history of platform shifts and admin audits</p>
+        </div>
+        <button
+          onClick={fetchLogs}
+          className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:bg-slate-50 transition-all flex items-center gap-2 text-slate-600"
+        >
+          <History size={16} className={loading ? 'animate-spin' : ''} />
+          <span className="text-sm font-bold uppercase tracking-widest">Refresh Logs</span>
+        </button>
+      </div>
+
+      <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100">
+        <div className="flex flex-col lg:flex-row gap-6 mb-10">
+          <div className="flex-1 relative">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search activity logs..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-16 pr-8 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-700"
+            />
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 lg:pb-0">
+            {['all', 'registration', 'approval', 'user', 'event', 'news'].map((type) => (
+              <button
+                key={type}
+                onClick={() => setFilter(type)}
+                className={`px-6 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all whitespace-nowrap ${filter === type
+                  ? 'bg-slate-900 text-white shadow-lg'
+                  : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                  }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {loading ? (
+            <div className="py-20 text-center">
+              <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-slate-400 font-medium">Loading audit trail...</p>
+            </div>
+          ) : filteredActivities.length > 0 ? (
+            filteredActivities.map((activity) => (
+              <div key={activity.id} className="group flex items-center gap-6 p-6 rounded-3xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all">
+                <div className={`p-4 rounded-2xl ${getColor(activity.type)}`}>
+                  {getIcon(activity.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-800 font-bold text-lg group-hover:text-slate-900 transition-colors">{activity.text}</p>
+                  <p className="text-slate-500 text-sm mt-1 flex items-center gap-2 font-medium">
+                    <Clock size={12} />
+                    {formatFullTime(activity.created_at)}
+                  </p>
+                </div>
+                <div className="hidden md:block">
+                  <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border ${getColor(activity.type).replace('bg-', 'border-').replace('-50', '-200')}`}>
+                    {activity.type}
+                  </span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="py-20 text-center bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-100">
+              <History size={48} className="mx-auto mb-4 text-slate-200" />
+              <p className="text-lg font-bold text-slate-400">No logs match your search</p>
+              <button onClick={() => { setFilter('all'); setSearchTerm(''); }} className="mt-4 text-emerald-600 font-bold hover:underline">Clear all filters</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ProfileEdit = ({ user }: { user: any }) => {
+  const { hotels, loading, refreshData } = useAppContext();
   const [formData, setFormData] = useState<any>(null);
   const [galleryImages, setGalleryImages] = useState<(string | File)[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
@@ -1791,51 +2449,26 @@ const ProfileEdit = ({ user }: { user: any }) => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('hotels')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+    if (!user || hotels.length === 0) return;
 
-        if (error) {
-          // If not found by ID, try email (fallback for older mock accounts)
-          const { data: byEmail, error: emailError } = await supabase
-            .from('hotels')
-            .select('*')
-            .eq('email', user.email)
-            .single();
+    // Try to find by ID first, then fallback to email for older mock accounts
+    let hotel = hotels.find(h => h.id === user.id);
+    if (!hotel) {
+      hotel = hotels.find(h => h.email === user.email);
+    }
 
-          if (!emailError && byEmail) {
-            setFormData({
-              ...byEmail,
-              hotelName: byEmail.hotel_name,
-              year: byEmail.year_established?.toString()
-            });
-            setGalleryImages(byEmail.gallery || []);
-            setGalleryPreviews(byEmail.gallery || []);
-            return;
-          }
-          throw error;
-        }
+    if (hotel) {
+      setFormData({
+        ...hotel,
+        hotelName: hotel.hotel_name,
+        year: hotel.year_established?.toString()
+      });
+      setGalleryImages(hotel.gallery || []);
+      setGalleryPreviews(hotel.gallery || []);
+    }
+  }, [user, hotels]);
 
-        if (data) {
-          setFormData({
-            ...data,
-            hotelName: data.hotel_name,
-            year: data.year_established?.toString()
-          });
-          setGalleryImages(data.gallery || []);
-          setGalleryPreviews(data.gallery || []);
-        }
-      } catch (err) {
-        console.error('Error fetching profile:', err);
-      }
-    };
 
-    if (user) fetchProfile();
-  }, [user]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -1844,7 +2477,6 @@ const ProfileEdit = ({ user }: { user: any }) => {
       const galleryUrls = await Promise.all(
         galleryImages.map(async (item) => {
           if (typeof item === 'string') return item; // Already a URL
-
           const file = item as File;
           const fileExt = file.name.split('.').pop();
           const fileName = `${user.id}-${Math.random()}.${fileExt}`;
@@ -1875,6 +2507,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
       if (error) throw error;
 
       setSaving(false);
+      refreshData();
       alert('Membership details updated successfully! Your public directory listing is now synchronized.');
     } catch (err: any) {
       console.error('Error saving profile:', err.message);
@@ -1916,7 +2549,61 @@ const ProfileEdit = ({ user }: { user: any }) => {
     }
   };
 
-  if (!formData) return <div className="p-12 text-center text-slate-400">Loading profile...</div>;
+  if (loading) {
+    return (
+      <div className="p-20 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm African-accents">
+        <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-6"></div>
+        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Synchronizing Secure Data...</p>
+      </div>
+    );
+  }
+
+  if (!formData) {
+    return (
+      <div className="max-w-3xl mx-auto py-12 African-accents">
+        <div className="bg-white rounded-[3rem] p-10 md:p-16 border border-slate-100 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-10 opacity-5 -rotate-12 group-hover:rotate-0 transition-transform duration-700">
+            <FileSignature size={240} />
+          </div>
+
+          <div className="relative z-10 text-center space-y-8">
+            <div className="w-24 h-24 bg-amber-50 text-amber-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-xl shadow-amber-900/10 animate-bounce-slow">
+              <AlertCircle size={48} />
+            </div>
+
+            <div className="space-y-3">
+              <h2 className="text-3xl md:text-4xl font-black text-slate-900 uppercase tracking-tighter">Registration Required</h2>
+              <p className="text-slate-500 font-medium max-w-md mx-auto leading-relaxed">
+                We couldn't find a hotel profile linked to your account. To access your member dashboard and public directory listing, please complete your official registration.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+              <Link
+                to="/register"
+                className="w-full sm:w-auto bg-slate-900 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-slate-900/20 hover:bg-emerald-600 transition-all flex items-center justify-center group"
+              >
+                <FileSignature size={18} className="mr-3 group-hover:scale-110 transition-transform" />
+                Submit Registration
+              </Link>
+              <button
+                onClick={() => refreshData()}
+                className="w-full sm:w-auto bg-slate-50 text-slate-500 px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-slate-100 transition-all flex items-center justify-center"
+              >
+                <History size={18} className="mr-3" />
+                Check Status
+              </button>
+            </div>
+
+            <div className="pt-8 border-t border-slate-50 flex items-center justify-center gap-8 text-[9px] font-black text-slate-300 uppercase tracking-widest">
+              <span className="flex items-center gap-2"><Check size={12} className="text-emerald-500" /> Secure SSL</span>
+              <span className="flex items-center gap-2"><Check size={12} className="text-emerald-500" /> Admin Verified</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl space-y-12 pb-24 african-accents">
@@ -2127,6 +2814,69 @@ const ProfileEdit = ({ user }: { user: any }) => {
 };
 
 const SettingsView = ({ user }: { user: any }) => {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const { refreshData, showNotification, setUser } = useAppContext();
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setUpdating(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (updateError) throw updateError;
+
+      const { user: authUser } = (await supabase.auth.getUser()).data;
+
+      // Ensure password_changed flag is updated in profile
+      if (authUser) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ password_changed: true })
+          .eq('id', authUser.id);
+
+        if (profileError) {
+          console.warn('Profile security flag update failed:', profileError);
+          showNotification('Password updated, but security flag update pending.', 'warning');
+        } else {
+          showNotification('Password updated successfully! Your account is now secure.', 'success');
+        }
+
+        // Optimistically update global state
+        setUser({
+          ...user,
+          password_changed: true
+        });
+      }
+
+      setNewPassword('');
+      setConfirmPassword('');
+      await refreshData();
+    } catch (err: any) {
+      console.error('Settings password update error:', err);
+      setError(err.message || 'Failed to update password');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl space-y-8 pb-12">
       <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
@@ -2167,23 +2917,52 @@ const SettingsView = ({ user }: { user: any }) => {
         <h3 className="text-xl font-bold mb-8 flex items-center text-slate-800">
           <Lock className="mr-3 text-amber-500" /> Security & Privacy
         </h3>
-        <div className="space-y-6">
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Current Password</label>
-            <input type="password" placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:ring-2 focus:ring-emerald-500" />
+
+        {error && (
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center text-rose-600 text-xs font-bold uppercase tracking-widest">
+            <AlertTriangle size={16} className="mr-3" /> {error}
           </div>
+        )}
+
+        {success && (
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center text-emerald-700 text-xs font-bold uppercase tracking-widest">
+            <CheckCircle size={16} className="mr-3" /> {success}
+          </div>
+        )}
+
+        <form onSubmit={handleUpdatePassword} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">New Password</label>
-              <input type="password" placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:ring-2 focus:ring-emerald-500" />
+              <input
+                required
+                type="password"
+                placeholder="••••••••"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
+              />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Confirm New Password</label>
-              <input type="password" placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:ring-2 focus:ring-emerald-500" />
+              <input
+                required
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
+              />
             </div>
           </div>
-          <button className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-md">Update Password</button>
-        </div>
+          <button
+            disabled={updating}
+            type="submit"
+            className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-md disabled:opacity-50"
+          >
+            {updating ? 'Updating...' : 'Update Password'}
+          </button>
+        </form>
       </div>
     </div>
   );
@@ -2192,24 +2971,25 @@ const SettingsView = ({ user }: { user: any }) => {
 // --- Main Dashboard Component ---
 
 export default function Dashboard() {
-  const [user, setUser] = useState<any>(null);
+  const { user, refreshData } = useAppContext();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const auth = localStorage.getItem('slah_auth');
-    if (!auth) {
-      navigate('/login');
-      return;
+    if (!user) {
+      const auth = localStorage.getItem('slah_auth');
+      if (!auth) {
+        navigate('/login');
+      }
     }
-    setUser(JSON.parse(auth));
-  }, [navigate]);
+  }, [user, navigate]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem('slah_auth');
-    setUser(null);
-    navigate('/login');
+    await supabase.auth.signOut();
+    window.location.href = '/';
   };
 
   if (!user) return null;
@@ -2222,43 +3002,57 @@ export default function Dashboard() {
     { name: 'Members', path: '/dashboard/members', icon: <Hotel size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Events', path: '/dashboard/events', icon: <Calendar size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'News', path: '/dashboard/news', icon: <Newspaper size={20} />, roles: ['super-admin', 'admin'] },
-    { name: 'Users', path: '/dashboard/users', icon: <Users size={20} />, roles: ['super-admin'] },
+    { name: 'Users', path: '/dashboard/users', icon: <Users size={20} />, roles: ['super-admin', 'admin'] },
+    { name: 'Logs', path: '/dashboard/logs', icon: <History size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'My Profile', path: '/dashboard/profile', icon: <Building2 size={20} />, roles: ['member'] },
     { name: 'Settings', path: '/dashboard/settings', icon: <Settings size={20} />, roles: ['super-admin', 'admin', 'member'] },
   ].filter(item => item.roles.includes(user.role));
 
   return (
     <div className="min-h-screen bg-slate-50 flex African-accents">
-      <aside className="hidden lg:flex flex-col w-72 bg-slate-900 text-white fixed h-full z-50">
-        <div className="p-8 border-b border-slate-800">
+      <aside className={`hidden lg:flex flex-col ${isCollapsed ? 'w-24' : 'w-80'} bg-slate-900 text-white fixed h-full z-50 transition-all duration-500 ease-in-out`}>
+        {/* Collapse Toggle Button */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute -right-4 top-12 w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-emerald-700 transition-colors z-[60]"
+        >
+          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </button>
+
+        <div className={`p-8 border-b border-slate-800 flex ${isCollapsed ? 'justify-center items-center' : 'justify-start items-center'}`}>
           <Link to="/">
-            <SLAHLogo variant="light" className="h-16 w-auto" />
+            <SLAHLogo variant="light" className={`${isCollapsed ? 'h-8 w-8' : 'h-16 w-auto'} transition-all duration-500`} />
           </Link>
         </div>
-        <nav className="flex-grow p-6 space-y-2 overflow-y-auto">
+        <nav className="flex-grow p-6 space-y-2 overflow-y-auto overflow-x-hidden">
           {menuItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center space-x-3 p-4 rounded-2xl font-bold transition-all uppercase tracking-widest text-xs ${location.pathname === item.path
+              className={`flex items-center p-4 rounded-2xl font-bold transition-all uppercase tracking-widest text-xs ${location.pathname === item.path
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
+                } ${isCollapsed ? 'justify-center space-x-0' : 'justify-start space-x-3'}`}
+              title={isCollapsed ? item.name : ''}
             >
-              {item.icon}
-              <span>{item.name}</span>
+              <div className="flex-shrink-0 flex items-center justify-center">
+                {item.icon}
+              </div>
+              {!isCollapsed && <span className="truncate">{item.name}</span>}
             </Link>
           ))}
         </nav>
         <div className="p-6 border-t border-slate-800">
-          <button onClick={handleLogout} className="flex items-center space-x-3 p-4 w-full text-slate-400 hover:text-rose-400 hover:bg-rose-900/10 rounded-2xl transition-all font-bold uppercase tracking-widest text-xs">
-            <LogOut size={20} />
-            <span>Sign Out</span>
+          <button onClick={handleLogout} className={`flex items-center p-4 w-full text-slate-400 hover:text-rose-400 hover:bg-rose-900/10 rounded-2xl transition-all font-bold uppercase tracking-widest text-xs ${isCollapsed ? 'justify-center space-x-0' : 'justify-start space-x-3'}`}>
+            <div className="flex-shrink-0 flex items-center justify-center">
+              <LogOut size={20} />
+            </div>
+            {!isCollapsed && <span className="truncate">Sign Out</span>}
           </button>
         </div>
       </aside>
 
-      <div className="flex-grow lg:ml-72 flex flex-col min-h-screen">
+      <div className={`flex-grow ${isCollapsed ? 'lg:ml-24' : 'lg:ml-80'} flex flex-col min-h-screen transition-all duration-500 ease-in-out`}>
         <header className="bg-white border-b border-slate-100 sticky top-0 z-40 p-4 md:p-6 flex items-center justify-between shadow-sm African-accents">
           <div className="flex items-center">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 mr-3 md:mr-4 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
@@ -2326,6 +3120,7 @@ export default function Dashboard() {
             <Route path="/events" element={<EventsManagement />} />
             <Route path="/news" element={<NewsManagement />} />
             <Route path="/users" element={<UserManagement />} />
+            <Route path="/logs" element={<ActivityLogs />} />
             <Route path="/profile" element={<ProfileEdit user={user} />} />
             <Route path="/settings" element={<SettingsView user={user} />} />
             <Route path="*" element={

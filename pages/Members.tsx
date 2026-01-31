@@ -1,57 +1,44 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, MapPin, Star, Filter, Hotel, ChevronRight, Award, SortAsc, SortDesc, ChevronDown, X } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Search, MapPin, Star, Filter, Hotel, ChevronRight, Award, ChevronDown, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { useAppContext } from '../context/AppContext';
 
 const Members: React.FC = () => {
+  const { members: rawMembers, loading } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
-  const [members, setMembers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Filtering & Sorting State
   const [selectedDistrict, setSelectedDistrict] = useState('All');
   const [selectedStars, setSelectedStars] = useState('All');
   const [selectedType, setSelectedType] = useState('All');
+  const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
+  const [roomRange, setRoomRange] = useState('All');
   const [sortBy, setSortBy] = useState('name-asc');
   const [isFilterVisible, setIsFilterVisible] = useState(false);
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('hotels')
-          .select('*')
-          .eq('status', 'approved');
+  // Normalize data structure for the directory grid
+  const members = useMemo(() => (rawMembers || []).map((m: any) => ({
+    id: m.id,
+    name: m.hotel_name,
+    location: m.city,
+    address: m.address,
+    district: m.district,
+    stars: m.stars,
+    image: (m.gallery && m.gallery.length > 0) ? m.gallery[0] : 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=800',
+    type: 'Hotel', // Property type not explicitly in schema
+    rooms: m.rooms || 0,
+    facilities: m.facilities || []
+  })), [rawMembers]);
 
-        if (error) throw error;
+  // Sierra Leone Districts
+  const SL_DISTRICTS = [
+    'Western Area Urban', 'Western Area Rural', 'Bo', 'Bombali', 'Bonthe',
+    'Falaba', 'Kailahun', 'Kambia', 'Karene', 'Kenema', 'Koinadugu',
+    'Kono', 'Moyamba', 'Port Loko', 'Pujehun', 'Tonkolili'
+  ].sort();
 
-        // Normalize data structure for the directory grid
-        const formatted = (data || []).map((m: any) => ({
-          id: m.id,
-          name: m.hotel_name,
-          location: m.city,
-          address: m.address,
-          district: m.district,
-          stars: m.stars,
-          image: (m.gallery && m.gallery.length > 0) ? m.gallery[0] : 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=800',
-          type: 'Hotel', // Property type not explicitly in schema
-          rooms: m.rooms || 'N/A'
-        }));
-
-        setMembers(formatted);
-      } catch (err) {
-        console.error('Error fetching members:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMembers();
-  }, []);
-
-  // Derive unique filter options from live data
-  const districts = useMemo(() => ['All', ...new Set(members.map(m => m.district).filter(Boolean))], [members]);
-  const propertyTypes = useMemo(() => ['All', ...new Set(members.map(m => m.type).filter(Boolean))], [members]);
+  const districts = ['All', ...SL_DISTRICTS];
+  const allPossibleFacilities = ['Restaurant', 'Bar', 'Pool', 'Conference Room', 'Spa', 'Wi-Fi'];
 
   // Combined Filtering & Sorting Logic
   const processedMembers = useMemo(() => {
@@ -64,7 +51,16 @@ const Members: React.FC = () => {
       const matchesStars = selectedStars === 'All' || m.stars === parseInt(selectedStars);
       const matchesType = selectedType === 'All' || m.type === selectedType;
 
-      return matchesSearch && matchesDistrict && matchesStars && matchesType;
+      const matchesFacilities = selectedFacilities.length === 0 ||
+        selectedFacilities.every(f => m.facilities.includes(f));
+
+      let matchesRooms = true;
+      if (roomRange === '0-20') matchesRooms = m.rooms <= 20;
+      else if (roomRange === '21-50') matchesRooms = m.rooms > 20 && m.rooms <= 50;
+      else if (roomRange === '51-100') matchesRooms = m.rooms > 50 && m.rooms <= 100;
+      else if (roomRange === '100+') matchesRooms = m.rooms > 100;
+
+      return matchesSearch && matchesDistrict && matchesStars && matchesType && matchesFacilities && matchesRooms;
     });
 
     // Apply Sorting
@@ -74,18 +70,28 @@ const Members: React.FC = () => {
         case 'name-desc': return b.name.localeCompare(a.name);
         case 'stars-desc': return b.stars - a.stars;
         case 'stars-asc': return a.stars - b.stars;
+        case 'capacity-desc': return (b.rooms || 0) - (a.rooms || 0);
+        case 'capacity-asc': return (a.rooms || 0) - (b.rooms || 0);
         default: return 0;
       }
     });
 
     return result;
-  }, [members, searchTerm, selectedDistrict, selectedStars, selectedType, sortBy]);
+  }, [members, searchTerm, selectedDistrict, selectedStars, selectedType, selectedFacilities, roomRange, sortBy]);
+
+  const toggleFacility = (f: string) => {
+    setSelectedFacilities(prev =>
+      prev.includes(f) ? prev.filter(item => item !== f) : [...prev, f]
+    );
+  };
 
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedDistrict('All');
     setSelectedStars('All');
     setSelectedType('All');
+    setSelectedFacilities([]);
+    setRoomRange('All');
     setSortBy('name-asc');
   };
 
@@ -129,6 +135,8 @@ const Members: React.FC = () => {
                   <option value="name-desc">Alphabetical (Z-A)</option>
                   <option value="stars-desc">Highest Rated</option>
                   <option value="stars-asc">Lowest Rated</option>
+                  <option value="capacity-desc">Largest Capacity</option>
+                  <option value="capacity-asc">Smallest Capacity</option>
                 </select>
                 <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
@@ -137,7 +145,7 @@ const Members: React.FC = () => {
             {/* Filter Toggle Button */}
             <button
               onClick={() => setIsFilterVisible(!isFilterVisible)}
-              className={`flex items-center justify-center space-x-3 px-10 py-5 rounded-[2rem] transition-all font-black text-[10px] uppercase tracking-[0.2em] shadow-lg ${isFilterVisible ? 'bg-emerald-600 text-white shadow-emerald-900/20' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+              className={`flex items-center justify-center space-x-3 px-10 py-5 rounded-[2rem] transition-all font-black text-[10px] uppercase tracking-[0.2em] shadow-lg ${isFilterVisible || selectedFacilities.length > 0 || roomRange !== 'All' ? 'bg-emerald-600 text-white shadow-emerald-900/20' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
             >
               <Filter size={18} />
               <span>{isFilterVisible ? 'Hide Filters' : 'Refine Results'}</span>
@@ -147,7 +155,7 @@ const Members: React.FC = () => {
           {/* Advanced Filter Drawer */}
           {isFilterVisible && (
             <div className="mt-8 pt-8 border-t border-slate-50 animate-in slide-in-from-top-4 duration-300">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
                 {/* District Filter */}
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
@@ -186,18 +194,22 @@ const Members: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Type Filter */}
+                {/* Room Capacity Filter */}
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
-                    <Hotel size={12} className="mr-2" /> Property Class
+                    <Award size={12} className="mr-2" /> Room Capacity
                   </label>
                   <div className="relative">
                     <select
-                      value={selectedType}
-                      onChange={(e) => setSelectedType(e.target.value)}
+                      value={roomRange}
+                      onChange={(e) => setRoomRange(e.target.value)}
                       className="w-full appearance-none bg-slate-50 border-none rounded-2xl px-6 py-4 pr-10 text-sm font-bold text-slate-700 outline-none"
                     >
-                      {propertyTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                      <option value="All">Any Size</option>
+                      <option value="0-20">Boutique (0-20)</option>
+                      <option value="21-50">Mid-size (21-50)</option>
+                      <option value="51-100">Large (51-100)</option>
+                      <option value="100+">Mega (100+)</option>
                     </select>
                     <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
@@ -213,6 +225,24 @@ const Members: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              {/* Facility Multi-select */}
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Must have these facilities:</label>
+                <div className="flex flex-wrap gap-3">
+                  {allPossibleFacilities.map(f => (
+                    <button
+                      key={f}
+                      onClick={() => toggleFacility(f)}
+                      className={`px-6 py-3 rounded-xl text-xs font-bold transition-all border ${selectedFacilities.includes(f)
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg'
+                        : 'bg-white border-slate-100 text-slate-500 hover:border-emerald-200 hover:bg-emerald-50'}`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -221,20 +251,15 @@ const Members: React.FC = () => {
         <div className="mb-10 flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] px-4">
           <div className="flex items-center">
             <Hotel size={14} className="mr-2 text-emerald-500" />
-            <span>{loading ? 'Consulting Directory...' : `Showing ${processedMembers.length} Certified Properties`}</span>
+            <span>{loading && processedMembers.length === 0 ? 'Consulting Directory...' : `Showing ${processedMembers.length} Certified Properties`}</span>
           </div>
-          {(selectedDistrict !== 'All' || selectedStars !== 'All' || selectedType !== 'All' || searchTerm) && (
-            <span className="text-emerald-600 animate-pulse">Filtered Active</span>
+          {(selectedDistrict !== 'All' || selectedStars !== 'All' || selectedType !== 'All' || searchTerm || selectedFacilities.length > 0 || roomRange !== 'All') && (
+            <span className="text-emerald-600 animate-pulse">Filters Active: {searchTerm ? '1 ' : ''}{selectedDistrict !== 'All' ? '1 ' : ''}{selectedFacilities.length > 0 ? selectedFacilities.length : ''} Sets</span>
           )}
         </div>
 
-        {/* Directory Results */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-          {loading ? (
-            <div className="col-span-full py-40 flex justify-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-emerald-700"></div>
-            </div>
-          ) : processedMembers.map((hotel) => (
+          {processedMembers.map((hotel) => (
             <div key={hotel.id} className="bg-white rounded-[3rem] overflow-hidden shadow-sm border border-slate-100 group hover:shadow-2xl transition-all duration-500 flex flex-col">
               <div className="h-72 relative overflow-hidden">
                 <img src={hotel.image} alt={hotel.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
@@ -272,9 +297,18 @@ const Members: React.FC = () => {
                   </div>
                 </div>
 
+                {hotel.facilities.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-8">
+                    {hotel.facilities.slice(0, 3).map((f: string) => (
+                      <span key={f} className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg text-[10px] font-bold">{f}</span>
+                    ))}
+                    {hotel.facilities.length > 3 && <span className="bg-slate-50 text-slate-400 px-3 py-1 rounded-lg text-[10px] font-bold">+{hotel.facilities.length - 3} More</span>}
+                  </div>
+                )}
+
                 <Link
                   to={`/members/${hotel.id}`}
-                  className="mt-auto flex items-center justify-between w-full py-5 px-8 bg-slate-50 text-slate-900 hover:bg-emerald-600 hover:text-white rounded-2xl transition-all font-black text-[10px] uppercase tracking-[0.2em] group/btn"
+                  className="mt-auto flex items-center justify-between w-full py-5 px-8 bg-emerald-600 text-white hover:bg-slate-900 rounded-2xl transition-all font-black text-[10px] uppercase tracking-[0.2em] group/btn shadow-xl shadow-emerald-900/10"
                 >
                   View Profile <ChevronRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
                 </Link>

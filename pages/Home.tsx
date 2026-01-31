@@ -1,10 +1,20 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAppContext } from '../context/AppContext';
 // Added Globe to imports to resolve undefined component error
 import { ShieldCheck, TrendingUp, Users, Building2, ChevronRight, Calendar, ArrowRight, Globe } from 'lucide-react';
 
 const Home: React.FC = () => {
+  const { news, members, profiles, loading: appLoading } = useAppContext();
+
+  const newsItems = news.slice(0, 3);
+  const stats = {
+    hotels: members.length || 120,
+    members: profiles.length || 5,
+    impact: '4.5B'
+  };
+
   const impacts = [
     {
       title: 'Industry Advocacy',
@@ -25,30 +35,6 @@ const Home: React.FC = () => {
       title: 'Policy Engagement',
       description: 'Collaborating with stakeholders to create an enabling environment for hospitality investment.',
       icon: <Building2 className="w-10 h-10 text-emerald-600" />,
-    },
-  ];
-
-  const newsItems = [
-    {
-      id: 'n1',
-      tag: 'Policy',
-      title: 'SLAH Partnership with National Tourist Board Strengthens Marketing Reach',
-      date: 'Oct 15, 2024',
-      image: 'https://picsum.photos/seed/n1/800/600',
-    },
-    {
-      id: 'n2',
-      tag: 'Training',
-      title: 'Workshop: Implementing Sustainable Green Energy in Modern Hotels',
-      date: 'Oct 2, 2024',
-      image: 'https://picsum.photos/seed/n2/800/600',
-    },
-    {
-      id: 'n3',
-      tag: 'Community',
-      title: 'Sierra Leone Association of Hotels Welcomes 5 New Boutique Members',
-      date: 'Sep 20, 2024',
-      image: 'https://picsum.photos/seed/n3/800/600',
     },
   ];
 
@@ -92,11 +78,11 @@ const Home: React.FC = () => {
         {/* Floating Stats - Hidden on Mobile */}
         <div className="hidden lg:flex absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 bg-white rounded-2xl shadow-2xl p-8 w-4/5 max-w-5xl justify-between items-center z-20">
           <div className="text-center px-8 border-r border-slate-100 last:border-0 flex-1">
-            <div className="text-3xl font-bold text-emerald-800">120+</div>
+            <div className="text-3xl font-bold text-emerald-800">{stats.hotels}+</div>
             <div className="text-slate-500 text-sm uppercase font-semibold">Member Hotels</div>
           </div>
           <div className="text-center px-8 border-r border-slate-100 last:border-0 flex-1">
-            <div className="text-3xl font-bold text-emerald-800">5k+</div>
+            <div className="text-3xl font-bold text-emerald-800">{stats.members >= 1000 ? `${(stats.members / 1000).toFixed(1)}k+` : `${stats.members}+`}</div>
             <div className="text-slate-500 text-sm uppercase font-semibold">Jobs Represented</div>
           </div>
           <div className="text-center px-8 border-r border-slate-100 last:border-0 flex-1">
@@ -104,7 +90,7 @@ const Home: React.FC = () => {
             <div className="text-slate-500 text-sm uppercase font-semibold">Years of Service</div>
           </div>
           <div className="text-center px-8 flex-1">
-            <div className="text-3xl font-bold text-emerald-800">4.5B</div>
+            <div className="text-3xl font-bold text-emerald-800">{stats.impact}</div>
             <div className="text-slate-500 text-sm uppercase font-semibold">Economic Impact</div>
           </div>
         </div>
@@ -213,21 +199,27 @@ const Home: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            {newsItems.map((item, idx) => (
-              <div key={idx} className="group cursor-pointer">
-                <div className="relative overflow-hidden rounded-2xl mb-6 h-64 shadow-md">
-                  <img src={item.image} alt={item.title} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500" />
-                  <div className="absolute top-4 left-4 bg-white px-3 py-1 rounded-full text-xs font-bold text-emerald-800 shadow-sm">{item.tag}</div>
+            {appLoading ? (
+              <div className="col-span-3 text-center py-12 text-slate-400">Loading latest news...</div>
+            ) : newsItems.length > 0 ? (
+              newsItems.map((item, idx) => (
+                <div key={idx} className="group cursor-pointer">
+                  <div className="relative overflow-hidden rounded-2xl mb-6 h-64 shadow-md">
+                    <img src={item.image} alt={item.title} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500" />
+                    <div className="absolute top-4 left-4 bg-white px-3 py-1 rounded-full text-xs font-bold text-emerald-800 shadow-sm">{item.category || item.tag}</div>
+                  </div>
+                  <div className="flex items-center text-slate-400 text-sm mb-3">
+                    <Calendar size={14} className="mr-2" /> {item.date}
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-4 line-clamp-2">{item.title}</h3>
+                  <Link to={`/news/${item.id}`} className="text-sm font-semibold text-amber-600 flex items-center uppercase tracking-wider">
+                    Read Article <ChevronRight size={14} className="ml-1" />
+                  </Link>
                 </div>
-                <div className="flex items-center text-slate-400 text-sm mb-3">
-                  <Calendar size={14} className="mr-2" /> {item.date}
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-4 line-clamp-2">{item.title}</h3>
-                <Link to={`/news/${item.id}`} className="text-sm font-semibold text-amber-600 flex items-center uppercase tracking-wider">
-                  Read Article <ChevronRight size={14} className="ml-1" />
-                </Link>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-12 text-slate-400 italic">No news updates available.</div>
+            )}
           </div>
         </div>
       </section>

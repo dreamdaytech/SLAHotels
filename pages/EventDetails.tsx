@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Calendar, MapPin, Clock, ChevronLeft, User, Mail, Building2,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
+import { useAppContext } from '../context/AppContext';
 
 interface AgendaItem {
   time: string;
@@ -39,57 +40,23 @@ interface Event {
 const EventDetails: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [event, setEvent] = useState<Event | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { events, loading: appLoading } = useAppContext();
   const [activeAgendaDay, setActiveAgendaDay] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', org: '' });
 
-  useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('events')
-          .select('*')
-          .eq('id', id)
-          .single();
-
-        if (error) throw error;
-
-        if (data) {
-          // Default fallback for legacy events or those without complex schedule
-          const defaultAgenda = [
-            { time: "08:30 AM", activity: "Delegate Arrival & Networking Breakfast" },
-            { time: "09:30 AM", activity: "Official Opening: Keynote Address" },
-            { time: "11:00 AM", activity: "Plenary Session: Industry Standards" },
-            { time: "01:00 PM", activity: "Hosted Networking Lunch" },
-            { time: "02:30 PM", activity: "Breakout Workshops" },
-            { time: "04:30 PM", activity: "Closing Reception" }
-          ];
-
-          setEvent({
-            ...data,
-            fullContent: data.full_content || data.fullContent || data.description + " This landmark summit provides a critical forum for stakeholders to align on national hospitality standards. We will explore digital transformation, sustainable energy solutions for resorts, and the latest trends in luxury guest experiences in West Africa.",
-            agenda: data.agenda || defaultAgenda,
-            speakers: data.speakers || [
-              { name: "Hon. Tamba Lamina", role: "Tourism Specialist", image: "https://i.pravatar.cc/150?u=tamba" },
-              { name: "Ms. Sia Bangura", role: "Eco-Hospitality Lead", image: "https://i.pravatar.cc/150?u=sia" },
-              { name: "Mr. Kelvin Cole", role: "NTB Representative", image: "https://i.pravatar.cc/150?u=kelvin" }
-            ],
-            schedule: data.schedule || []
-          });
-        }
-      } catch (err) {
-        console.error('Error fetching event details:', err);
-      } finally {
-        setLoading(false);
-      }
+  const event = useMemo(() => {
+    const found = events.find(e => e.id === id);
+    if (!found) return null;
+    return {
+      ...found,
+      fullContent: found.full_content || found.fullContent || found.description,
+      agenda: found.agenda || [],
+      speakers: found.speakers || [],
+      schedule: found.schedule || []
     };
-
-    if (id) fetchEvent();
-  }, [id]);
+  }, [events, id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,7 +105,7 @@ END:VCALENDAR`;
     document.body.removeChild(link);
   };
 
-  if (loading) return (
+  if (appLoading && !event) return (
     <div className="pt-40 pb-40 text-center text-slate-400">
       <div className="w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
       <p className="text-xl font-bold">Synchronizing Event Details...</p>

@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Calendar, User, ChevronLeft, Facebook, Twitter, Linkedin, Share2, Tag, ArrowRight } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useAppContext } from '../context/AppContext';
 
 interface NewsArticle {
   id: string;
@@ -18,50 +18,15 @@ interface NewsArticle {
 
 const NewsDetails: React.FC = () => {
   const { id } = useParams();
-  const [article, setArticle] = useState<NewsArticle | null>(null);
-  const [recentNews, setRecentNews] = useState<NewsArticle[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { news, loading: appLoading } = useAppContext();
 
-  useEffect(() => {
-    const fetchNewsData = async () => {
-      try {
-        setLoading(true);
-        // Fetch current article
-        const { data: current, error: currentError } = await supabase
-          .from('news')
-          .select('*')
-          .eq('id', id)
-          .single();
+  const article = useMemo(() => news.find(n => n.id === id), [news, id]);
+  const recentNews = useMemo(() => news.filter(n => n.id !== id).slice(0, 3), [news, id]);
 
-        if (currentError) throw currentError;
-        setArticle(current);
-
-        // Fetch 3 most recent articles excluding current
-        const { data: recent, error: recentError } = await supabase
-          .from('news')
-          .select('*')
-          .neq('id', id)
-          .eq('status', 'Published')
-          .order('date', { ascending: false })
-          .limit(3);
-
-        if (!recentError) setRecentNews(recent || []);
-
-      } catch (err) {
-        console.error('Error fetching news details:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) fetchNewsData();
-  }, [id]);
-
-  if (loading) return (
+  if (appLoading && !article) return (
     <div className="pt-40 pb-40 text-center text-slate-400">
       <div className="w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
       <p className="text-xl font-bold tracking-tighter text-slate-900">Synchronizing News Network...</p>
-      <p className="text-xs font-black uppercase tracking-[0.3em] mt-2">Fetching Official SLAH Bulletins</p>
     </div>
   );
 
@@ -159,20 +124,7 @@ const NewsDetails: React.FC = () => {
 
               <div className="text-lg text-slate-700 leading-relaxed space-y-6 whitespace-pre-wrap">
                 {article.fullContent || (
-                  <>
-                    <p>
-                      FREETOWN — The Sierra Leone Association of Hotels (SLAH) has officially announced a series of strategic initiatives aimed at bolstering the national tourism framework and enhancing the professional capacity of our member institutions. As the national umbrella body representing hospitality stakeholders, we remain committed to fostering an environment where excellence and ethical standards are the bedrock of our industry.
-                    </p>
-                    <p>
-                      In collaboration with international partners and the Ministry of Tourism and Cultural Affairs, SLAH is spearheading a digital transformation program. This program is designed to provide boutique and large-scale hotels alike with the tools necessary to compete on a global stage, from advanced reservation systems to data-driven marketing strategies.
-                    </p>
-                    <p>
-                      "Our vision is for Sierra Leone to become the hospitality heart of West Africa," said a spokesperson for the Secretariat. "This goal requires not just infrastructure, but a mindset of continuous improvement and adaptation to modern guest expectations."
-                    </p>
-                    <p>
-                      The association will be conducting a series of regional town-hall meetings across Bo, Kenema, and Makeni to ensure that provincial hospitality providers are integrated into these national development plans. We encourage all members to stay engaged with the association for upcoming workshop schedules and policy updates.
-                    </p>
-                  </>
+                  <p className="italic text-slate-400">Full content for this article is currently being synchronized. Please check back shortly for the complete official update.</p>
                 )}
               </div>
             </div>

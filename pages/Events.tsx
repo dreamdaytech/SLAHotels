@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Clock, Search, ArrowUpRight, Filter, ChevronDown, CalendarDays, History, PlayCircle, LayoutGrid } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Calendar, MapPin, Clock, Search, ArrowUpRight, Filter, ChevronDown, CalendarDays, History, PlayCircle, LayoutGrid, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 
 interface Event {
@@ -90,33 +91,11 @@ const EventCard: React.FC<{ event: Event }> = ({ event }) => {
 };
 
 const Events: React.FC = () => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { events, loading } = useAppContext();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'past' | 'current'>('upcoming');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'past' | 'current'>('all');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
-
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('events')
-          .select('*')
-          .eq('status', 'Published')
-          .order('date', { ascending: sortOrder === 'oldest' });
-
-        if (error) throw error;
-        setEvents(data || []);
-      } catch (err) {
-        console.error('Error fetching events:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEvents();
-  }, [sortOrder]);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -163,10 +142,10 @@ const Events: React.FC = () => {
             {/* Status Navigation Tabs */}
             <div className="flex p-1.5 bg-slate-100 rounded-[1.75rem] w-fit overflow-x-auto no-scrollbar scroll-smooth">
               {[
+                { id: 'all', label: 'All Events', icon: <LayoutGrid size={14} /> },
                 { id: 'upcoming', label: 'Upcoming', icon: <CalendarDays size={14} /> },
                 { id: 'current', label: 'Today', icon: <PlayCircle size={14} /> },
                 { id: 'past', label: 'Archive', icon: <History size={14} /> },
-                { id: 'all', label: 'All Events', icon: <LayoutGrid size={14} /> },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -245,13 +224,8 @@ const Events: React.FC = () => {
           {searchQuery && <span className="text-emerald-600">Search: "{searchQuery}"</span>}
         </div>
 
-        {/* Events Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
-          {loading ? (
-            <div className="col-span-full py-40 flex justify-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-emerald-700"></div>
-            </div>
-          ) : filteredEvents.length > 0 ? (
+          {filteredEvents.length > 0 ? (
             filteredEvents.map((event) => (
               <EventCard key={event.id} event={event} />
             ))

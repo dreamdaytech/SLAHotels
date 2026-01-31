@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogIn, ShieldCheck, Mail, Lock, AlertCircle, ChevronLeft, UserCircle, ShieldAlert, Hotel } from 'lucide-react';
+import { LogIn, ShieldCheck, Mail, Lock, AlertCircle, ChevronLeft, UserCircle, ShieldAlert, Hotel, Info } from 'lucide-react';
 import { SLAHLogo } from '../Logo';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase'; // Vite Force Refresh Tag
+import { useAppContext } from '../context/AppContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -19,11 +20,23 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const navigate = useNavigate();
+  const { showNotification, setUser } = useAppContext();
 
   React.useEffect(() => {
-    // Check if user is already logged in (e.g. arriving via recovery link)
+    // 1. Cleanup Supabase auth fragments from HashRouter URL
+    // HashRouter uses #/route, while Supabase appends #access_token=...
+    // This creates #/login#access_token=... which is non-standard.
+    const cleanupAuthFragment = () => {
+      // Supabase appends auth fragments like #access_token=... to the URL.
+      // With BrowserRouter, we can just clear the hash if it exists.
+      if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('type=recovery'))) {
+        console.log('Auth fragment detected. Cleaning up URL hash...');
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    };
+
+    // 2. Check session and profile state
     const checkUser = async () => {
-      // Supabase sets the session in the URL fragment (#) for recovery links
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session?.user) {
@@ -35,6 +48,14 @@ export default function Login() {
           .single();
 
         if (profile) {
+          // STATE-FIRST: If database confirms password is changed, bypass all reset views
+          if (profile.password_changed) {
+            console.log('Password verified in database. Transitioning to dashboard.');
+            cleanupAuthFragment();
+            navigate('/dashboard', { replace: true });
+            return;
+          }
+
           // Detect if we came from a recovery link (typically via hash)
           const isRecovery = window.location.hash.includes('type=recovery');
 
@@ -42,10 +63,11 @@ export default function Login() {
             setView('recovery');
           } else if (!profile.password_changed) {
             setView('update');
-          } else {
-            navigate('/dashboard');
           }
         }
+      } else {
+        // If no user, just clean up if there's an error fragment
+        cleanupAuthFragment();
       }
     };
     checkUser();
@@ -92,6 +114,7 @@ export default function Login() {
           setView('update');
           setLoading(false);
         } else {
+          showNotification('Login successful!', 'success');
           navigate('/dashboard');
         }
       }
@@ -115,21 +138,35 @@ export default function Login() {
 
     setLoading(true);
     setError('');
+    console.log('[DEBUG] Starting password update process...');
+
     try {
+      // 0. Ensure we have a valid session before updating
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        throw new Error('Your session has expired. Please go back to login and sign in again.');
+      }
+
       // 1. Update the password in Auth
+      console.log('[DEBUG] Calling supabase.auth.updateUser...');
       const { data: updateData, error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
       if (updateError) {
+        console.error('[DEBUG] Update Auth Error:', updateError);
         if (updateError.message.includes('same as the old password')) {
-          throw new Error('Your new password must be different from the old one.');
+          throw new Error('Your new password must be different from the temporary one we gave you.');
+        }
+        if (updateError.status === 400 || updateError.status === 422) {
+          throw new Error(`Security Policy: ${updateError.message}`);
         }
         throw updateError;
       }
 
       const user = updateData?.user;
       if (!user) throw new Error('Failed to retrieve user session after update.');
+      console.log('[DEBUG] Auth update success for:', user.email);
 
       // 2. Update password_changed flag in profile
       const { data: profileCheck, error: fetchError } = await supabase
@@ -177,10 +214,21 @@ export default function Login() {
 
       if (!persistenceSuccess) {
         // If profile update failed but password change succeeded, we notify and let them in
-        alert('Password changed successfully, but we could not update your security badge in the database. You may be prompted to change it again until this is fixed. Continuing to dashboard...');
+        showNotification('Password updated successfully, however, we were unable to update your security flag. Please contact support if you are asked to reset it again.', 'warning');
+      } else {
+        // Optimistically update global user state
+        setUser({
+          ...user,
+          password_changed: true
+        });
+        showNotification('Security update complete. Your new password is now active and your account is secure. Welcome to your dashboard.', 'success');
       }
 
       // 4. Success - Go to dashboard
+      // We no longer need manual hash cleanup here as it conflicts with BrowserRouter
+      // and is handled by the checkUser useEffect on mount if we ever return to login.
+
+      setLoading(false); // Reset loading state BEFORE navigation to ensure UI reacts immediately
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
       console.error('Password change failure:', err);
@@ -197,6 +245,17 @@ export default function Login() {
     setResetSuccess(false);
 
     try {
+      // 1. Verify if email exists in the system via safe RPC
+      const { data: exists, error: rpcError } = await supabase
+        .rpc('verify_email_exists', { email_to_check: resetEmail });
+
+      if (rpcError) throw rpcError;
+
+      if (!exists) {
+        throw new Error('This email address is not registered with SLAH. Please check for typos or contact the Secretariat.');
+      }
+
+      // 2. Proceed with reset if profile exists
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/login`,
       });
@@ -205,6 +264,7 @@ export default function Login() {
 
       setResetSuccess(true);
       setResetEmail('');
+      showNotification('Recovery email sent successfully.', 'success');
     } catch (err: any) {
       console.error('Reset error:', err.message);
       setError(err.message || 'Failed to send reset email.');
@@ -232,6 +292,16 @@ export default function Login() {
             <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start space-x-3 text-red-600 text-sm">
               <AlertCircle className="flex-shrink-0" size={18} />
               <span>{error}</span>
+            </div>
+          )}
+
+          {view === 'login' && !error && (
+            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-start space-x-3 text-emerald-800 text-sm animate-in fade-in slide-in-from-top-2 duration-500">
+              <Info className="flex-shrink-0 text-emerald-500" size={18} />
+              <div>
+                <p className="font-bold">Welcome Back!</p>
+                <p className="text-xs opacity-80">Please enter your credentials to access the secure association portal.</p>
+              </div>
             </div>
           )}
 

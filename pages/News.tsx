@@ -1,33 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Calendar, User, ArrowRight, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { useAppContext } from '../context/AppContext';
 
 const News: React.FC = () => {
-  const [articles, setArticles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('news')
-          .select('*')
-          .eq('status', 'Published')
-          .order('date', { ascending: false });
-
-        if (error) throw error;
-        setArticles(data || []);
-      } catch (err) {
-        console.error('Error fetching news:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNews();
-  }, []);
+  const { news: articles } = useAppContext();
 
   return (
     <div className="pt-24 lg:pt-32 pb-24">
@@ -40,11 +18,7 @@ const News: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Main List */}
           <div className="lg:col-span-8">
-            {loading ? (
-              <div className="flex justify-center py-24">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
-              </div>
-            ) : articles.length === 0 ? (
+            {articles.length === 0 ? (
               <div className="text-center py-24 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
                 <p className="text-slate-400 font-medium">No published news found.</p>
               </div>

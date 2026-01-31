@@ -69,7 +69,7 @@ const Register: React.FC = () => {
 
           const { data, error } = await supabase.storage
             .from('hotel-gallery')
-            .upload(filePath, file);
+            .upload(filePath, file as File);
 
           if (error) throw error;
           const { data: { publicUrl } } = supabase.storage.from('hotel-gallery').getPublicUrl(filePath);
@@ -86,7 +86,7 @@ const Register: React.FC = () => {
 
         const { data, error } = await supabase.storage
           .from('hotel-documents')
-          .upload(filePath, file);
+          .upload(filePath, file as File);
 
         if (error) throw error;
         const { data: { publicUrl } } = supabase.storage.from('hotel-documents').getPublicUrl(filePath);

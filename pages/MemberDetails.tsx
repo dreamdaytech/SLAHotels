@@ -1,46 +1,27 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 // Added Image as ImageIcon and ArrowUpRight to imports to fix missing component errors
 import { MapPin, Phone, Mail, Globe, Star, Users, Calendar, Building2, CheckCircle2, ChevronLeft, Info, Briefcase, Award, Image as ImageIcon, ArrowUpRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAppContext } from '../context/AppContext';
 
 const MemberDetails: React.FC = () => {
   const { id } = useParams();
-  const [hotel, setHotel] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { hotels, loading: appLoading } = useAppContext();
 
-  useEffect(() => {
-    const fetchMember = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('hotels')
-          .select('*')
-          .eq('id', id)
-          .single();
-
-        if (error) throw error;
-
-        if (data) {
-          setHotel({
-            ...data,
-            name: data.hotel_name,
-            year: data.year_established?.toString() || 'N/A',
-            image: (data.gallery && data.gallery.length > 0) ? data.gallery[0] : 'https://images.unsplash.com/photo-1551882547-ff43c63fedfe?auto=format&fit=crop&q=80&w=1200'
-          });
-        }
-      } catch (err) {
-        console.error('Error fetching member details:', err);
-      } finally {
-        setLoading(false);
-      }
+  const hotel = useMemo(() => {
+    const found = hotels.find(h => h.id === id);
+    if (!found) return null;
+    return {
+      ...found,
+      name: found.hotel_name,
+      year: found.year_established?.toString() || 'N/A',
+      image: (found.gallery && found.gallery.length > 0) ? found.gallery[0] : 'https://images.unsplash.com/photo-1551882547-ff43c63fedfe?auto=format&fit=crop&q=80&w=1200'
     };
+  }, [hotels, id]);
 
-    if (id) fetchMember();
-  }, [id]);
-
-  if (loading) return (
+  if (appLoading && !hotel) return (
     <div className="pt-40 pb-40 text-center text-slate-400">
       <div className="w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
       <p className="text-xl font-bold tracking-tighter text-slate-900">Synchronizing Directory Data...</p>
@@ -125,12 +106,6 @@ const MemberDetails: React.FC = () => {
                     <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Impact</span>
                     <p className="text-xl font-bold text-slate-900">{hotel.employees || '0+'} Staff Members</p>
                   </div>
-                  {hotel.website && (
-                    <div>
-                      <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Web Presence</span>
-                      <p className="text-lg font-bold text-emerald-600 hover:underline cursor-pointer" onClick={() => window.open(`https://${hotel.website.replace('https://', '').replace('http://', '')}`)}>{hotel.website}</p>
-                    </div>
-                  )}
                   <div>
                     <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Association Status</span>
                     <div className="flex items-center text-emerald-600 font-black uppercase text-xs tracking-widest">
@@ -142,16 +117,32 @@ const MemberDetails: React.FC = () => {
             </section>
 
             {/* Gallery Section */}
-            {hotel.gallery && hotel.gallery.length > 1 && (
-              <section className="space-y-6">
-                <div className="flex items-center mb-6">
-                  <ImageIcon className="text-emerald-600 mr-4" size={28} />
-                  <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Public Gallery</h2>
+            {hotel.gallery && hotel.gallery.length > 0 && (
+              <section className="space-y-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center">
+                    <ImageIcon className="text-emerald-600 mr-4" size={28} />
+                    <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Hotel Gallery</h2>
+                  </div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">
+                    {hotel.gallery.length} Verified Photos
+                  </span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                   {hotel.gallery.map((img: string, idx: number) => (
-                    <div key={idx} className="aspect-square rounded-[2rem] overflow-hidden shadow-sm border border-slate-100 group">
-                      <img src={img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={`Gallery ${idx}`} />
+                    <div
+                      key={idx}
+                      className={`relative rounded-[2rem] overflow-hidden shadow-md border border-white group cursor-pointer ${idx === 0 ? 'md:col-span-2 md:row-span-2 aspect-video' : 'aspect-square'
+                        }`}
+                    >
+                      <img
+                        src={img}
+                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                        alt={`${hotel.name} Gallery ${idx + 1}`}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
+                        <p className="text-white text-[10px] font-black uppercase tracking-widest">View Image</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -176,24 +167,37 @@ const MemberDetails: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                {hotel.roomTypes && hotel.roomTypes.length > 0 && (
+                {(hotel.room_types || hotel.roomTypes) && (
                   <div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Room Categories</h4>
-                    <div className="flex flex-wrap gap-3">
-                      {hotel.roomTypes.map((t: string) => (
-                        <span key={t} className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 text-xs font-bold uppercase tracking-widest">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Room Types Available</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {(hotel.room_types || hotel.roomTypes || []).map((t: string) => (
+                        <div key={t} className="flex items-center p-4 bg-slate-50 rounded-2xl text-slate-700 font-bold border border-slate-100 text-sm">
+                          <CheckCircle2 size={14} className="mr-3 text-emerald-500" />
                           {t}
-                        </span>
+                        </div>
                       ))}
                     </div>
                   </div>
                 )}
                 {hotel.amenities && (
                   <div>
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Additional Amenities</h4>
-                    <p className="text-slate-600 leading-relaxed p-8 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200 font-medium italic">
-                      "{hotel.amenities}"
-                    </p>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">The Atmosphere</h4>
+                    <div className="relative p-10 bg-slate-900 rounded-[2.5rem] text-white shadow-2xl overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+                        <Award size={120} />
+                      </div>
+                      <div className="relative z-10">
+                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.3em] mb-4 block">Manager's Remark</span>
+                        <p className="text-lg md:text-xl font-medium leading-relaxed italic text-slate-200">
+                          "{hotel.amenities}"
+                        </p>
+                        <div className="mt-8 flex items-center gap-4">
+                          <div className="w-10 h-1 border-t-2 border-emerald-500"></div>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Commitment to Excellence</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

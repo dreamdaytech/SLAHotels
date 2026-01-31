@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ChevronRight, Phone, Mail, MapPin, Facebook, Twitter, Linkedin, Globe, ShieldCheck, TrendingUp, Users, Building2, LayoutDashboard, LogIn, LogOut, Calendar, ChevronDown } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, ChevronRight, Phone, Mail, MapPin, Facebook, Twitter, Linkedin, Globe, ShieldCheck, TrendingUp, Users, Building2, LayoutDashboard, LogIn, LogOut, Calendar, ChevronDown, CheckCircle2, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 import Home from './pages/Home';
 import About from './pages/About';
 import Members from './pages/Members';
@@ -15,8 +15,12 @@ import Register from './pages/Register';
 import MemberDetails from './pages/MemberDetails';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Secretariat from './pages/Secretariat';
+import NotFound from './pages/NotFound';
 import { SLAHLogo } from './Logo';
 import { supabase } from './lib/supabase';
+
+import { AppProvider, useAppContext } from './context/AppContext';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -30,7 +34,7 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMediaOpen, setMobileMediaOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const { user } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -38,67 +42,25 @@ const Navbar = () => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
 
-    // Initial session check
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await fetchProfile(session.user);
-      }
-    };
-
-    checkSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        await fetchProfile(session.user);
-      } else {
-        setUser(null);
-        localStorage.removeItem('slah_auth');
-        localStorage.removeItem('slah_remember');
-      }
-    });
-
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      subscription.unsubscribe();
     };
   }, []);
 
-  const fetchProfile = async (sessionUser: any) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', sessionUser.id)
-        .single();
-
-      if (data) {
-        const userData = {
-          ...sessionUser,
-          name: data.name,
-          role: data.role,
-          password_changed: data.password_changed
-        };
-        setUser(userData);
-        // Temporarily keep localStorage for components still relying on it
-        localStorage.setItem('slah_auth', JSON.stringify(userData));
-      }
-    } catch (err) {
-      console.error('Error fetching profile:', err);
-    }
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem('slah_auth');
-    setUser(null);
-    navigate('/');
+    window.location.href = '/';
   };
 
   const navLinks = [
     { name: 'Home', path: '/' },
-    { name: 'About SLAH', path: '/about' },
+    {
+      name: 'About SLAH',
+      submenu: [
+        { name: 'Who We Are', path: '/about' },
+        { name: 'The Secretariat', path: '/about/secretariat' },
+      ]
+    },
     { name: 'Members', path: '/members' },
     {
       name: 'Media',
@@ -180,9 +142,18 @@ const Navbar = () => {
       </div>
 
       {/* Mobile Nav */}
-      <div className={`lg:hidden fixed inset-0 bg-white z-40 transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="flex flex-col h-full p-8 pt-24 space-y-4 overflow-y-auto">
-          <div className="mb-8"><SLAHLogo variant="dark" className="h-24 mx-auto" /></div>
+      <div className={`lg:hidden fixed inset-0 bg-white z-[60] transition-transform duration-500 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        {/* Close Button Inside Mobile Menu */}
+        <button
+          onClick={() => setIsOpen(false)}
+          className="absolute top-8 right-8 p-3 bg-slate-50 text-slate-900 rounded-2xl hover:bg-slate-100 border border-slate-100 transition-all shadow-sm active:scale-95 z-[70]"
+          aria-label="Close menu"
+        >
+          <X size={28} />
+        </button>
+
+        <div className="flex flex-col h-full p-8 pt-24 space-y-4 overflow-y-auto African-accents">
+          <div className="mb-12 flex justify-center"><SLAHLogo variant="dark" className="h-24" /></div>
           {navLinks.map((link) => (
             link.submenu ? (
               <div key={link.name} className="flex flex-col">
@@ -246,6 +217,7 @@ const Footer = () => {
             <h4 className="text-lg font-bold mb-6">Quick Links</h4>
             <ul className="space-y-4 text-slate-400 text-sm">
               <li><Link to="/about" className="hover:text-amber-500">About SLAH</Link></li>
+              <li><Link to="/about/secretariat" className="hover:text-amber-500">The Secretariat</Link></li>
               <li><Link to="/members" className="hover:text-amber-500">Member Directory</Link></li>
               <li><Link to="/events" className="hover:text-amber-500">Events Calendar</Link></li>
               <li><Link to="/advocacy" className="hover:text-amber-500">Industry Advocacy</Link></li>
@@ -277,31 +249,102 @@ const Footer = () => {
   );
 };
 
+const NotificationToast = () => {
+  const { notification, clearNotification } = useAppContext();
+
+  if (!notification) return null;
+
+  const styles = {
+    success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+    error: 'bg-red-50 border-red-200 text-red-800',
+    warning: 'bg-amber-50 border-amber-200 text-amber-800',
+    info: 'bg-slate-50 border-slate-200 text-slate-800',
+  };
+
+  const icons = {
+    success: <CheckCircle2 className="text-emerald-500" size={20} />,
+    error: <AlertCircle className="text-red-500" size={20} />,
+    warning: <AlertTriangle className="text-amber-500" size={20} />,
+    info: <Info className="text-slate-500" size={20} />,
+  };
+
+  return (
+    <div className="fixed bottom-8 right-8 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
+      <div className={`flex items-center space-x-4 p-4 pr-6 rounded-2xl border shadow-2xl ${styles[notification.type]} min-w-[320px] max-w-md`}>
+        <div className="flex-shrink-0">
+          {icons[notification.type]}
+        </div>
+        <div className="flex-grow">
+          <p className="text-sm font-semibold">{notification.message}</p>
+        </div>
+        <button
+          onClick={clearNotification}
+          className="flex-shrink-0 p-1 hover:bg-black/5 rounded-full transition-colors"
+        >
+          <X size={16} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const AppContent = () => {
+  const location = useLocation();
+  const { hotels } = useAppContext();
+
+  // Routes where navbar/footer should be hidden
+  const isDashboard = location.pathname.startsWith('/dashboard');
+
+  // Detect 404: 
+  // We check if the current path matches any of our defined routes
+  const definedRoutes = [
+    '/', '/about', '/about/secretariat', '/members', '/events',
+    '/advocacy', '/news', '/contact', '/register', '/login'
+  ];
+
+  // Simple check for dynamic routes like /members/:id, /news/:id, /events/:id
+  const isDynamicRoute =
+    location.pathname.startsWith('/members/') ||
+    location.pathname.startsWith('/news/') ||
+    location.pathname.startsWith('/events/');
+
+  const isNotFound = !isDashboard && !isDynamicRoute && !definedRoutes.includes(location.pathname);
+
+  return (
+    <div className="min-h-screen flex flex-col african-accents">
+      {!isDashboard && !isNotFound && <Navbar />}
+      <main className="flex-grow">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/about/secretariat" element={<Secretariat />} />
+          <Route path="/members" element={<Members />} />
+          <Route path="/members/:id" element={<MemberDetails />} />
+          <Route path="/events" element={<Events />} />
+          <Route path="/events/:id" element={<EventDetails />} />
+          <Route path="/advocacy" element={<Advocacy />} />
+          <Route path="/news" element={<News />} />
+          <Route path="/news/:id" element={<NewsDetails />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard/*" element={<Dashboard />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+      {!isDashboard && !isNotFound && <Footer />}
+      <NotificationToast />
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <Router>
-      <ScrollToTop />
-      <div className="min-h-screen flex flex-col african-accents">
-        <Navbar />
-        <main className="flex-grow">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/members" element={<Members />} />
-            <Route path="/members/:id" element={<MemberDetails />} />
-            <Route path="/events" element={<Events />} />
-            <Route path="/events/:id" element={<EventDetails />} />
-            <Route path="/advocacy" element={<Advocacy />} />
-            <Route path="/news" element={<News />} />
-            <Route path="/news/:id" element={<NewsDetails />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/dashboard/*" element={<Dashboard />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
+      <AppProvider>
+        <ScrollToTop />
+        <AppContent />
+      </AppProvider>
     </Router>
   );
 };
