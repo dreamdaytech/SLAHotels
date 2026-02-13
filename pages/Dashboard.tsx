@@ -7,13 +7,14 @@ import {
   Lock, Eye, Trash2, Edit3, Calendar, UploadCloud, Info,
   Briefcase, Send, Target, Trash, ListTodo, Camera,
   User as UserIcon, Copy, AlertTriangle, CheckCircle, Newspaper,
-  Image as ImageIcon, Globe, Award, ChevronRight, FileCheck, Check,
-  MoreHorizontal, History, Filter, Phone, Scale, FileBadge, FileSignature, CheckSquare,
-  ShieldCheck, AlertCircle, ChevronLeft
+  Image as ImageIcon, Globe, Award, ChevronRight, FileCheck, Check, ChevronUp, ChevronDown,
+  MoreHorizontal, MoreVertical, History, Filter, Phone, Scale, FileBadge, FileSignature, CheckSquare,
+  ShieldCheck, AlertCircle, ChevronLeft, Loader2, ClipboardList, ArrowRight, ArrowUp, ArrowDown, Save
 } from 'lucide-react';
 import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
+import { isProfileComplete } from '../lib/utils';
 
 // --- Dashboard Sub-Components ---
 
@@ -32,7 +33,7 @@ const Stats = ({ user }: { user: any }) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 mt-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 mb-8 mt-2">
       {stats.map((stat, i) => (
         <div key={i} className="bg-white p-5 md:p-6 rounded-3xl shadow-sm border border-slate-100 flex md:block items-center justify-between md:justify-start">
           <div className="flex items-center space-x-4 md:block md:space-x-0">
@@ -125,11 +126,12 @@ const RecentActivity = () => {
   );
 };
 
-const ApplicationModal = ({ app, onClose, onApprove, onReject, onMoveToPending, isProcessing }: {
+const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMoveToPending, isProcessing }: {
   app: any,
   onClose: () => void,
   onApprove: (id: string) => void,
   onReject: (id: string) => void,
+  onSuspend: (id: string) => void,
   onMoveToPending: (id: string) => void,
   isProcessing: boolean
 }) => {
@@ -387,6 +389,14 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onMoveToPending, 
                   )}
                   {isProcessing ? 'Processing Approval...' : 'Approve Membership'}
                 </button>
+                <button
+                  disabled={isProcessing}
+                  onClick={() => onSuspend(app.id)}
+                  className="w-full sm:w-auto px-8 py-3 bg-white text-amber-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-50 transition-all border border-slate-200 hover:border-amber-200 disabled:opacity-50 flex items-center justify-center"
+                >
+                  <AlertTriangle size={14} className="mr-2" />
+                  Suspend
+                </button>
               </>
             )}
             {app.status === 'rejected' && (
@@ -424,6 +434,33 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onMoveToPending, 
                 >
                   {isProcessing ? 'Processing...' : 'Reject Application'}
                 </button>
+                <button
+                  disabled={isProcessing}
+                  onClick={() => onSuspend(app.id)}
+                  className="w-full sm:w-auto px-8 py-3 bg-white text-amber-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-amber-50 transition-all border border-slate-200 hover:border-amber-200 disabled:opacity-50 flex items-center justify-center"
+                >
+                  <AlertTriangle size={14} className="mr-2" />
+                  Suspend
+                </button>
+              </>
+            )}
+            {app.status === 'suspended' && (
+              <>
+                <button
+                  disabled={isProcessing}
+                  onClick={() => onMoveToPending(app.id)}
+                  className="w-full sm:w-auto px-8 py-3 bg-white text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all border border-slate-200 disabled:opacity-50"
+                >
+                  {isProcessing ? 'Processing...' : 'Restore to Pending'}
+                </button>
+                <button
+                  disabled={isProcessing}
+                  onClick={() => onApprove(app.id)}
+                  className="w-full sm:w-auto px-12 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-emerald-900/20 flex items-center justify-center disabled:opacity-50"
+                >
+                  <CheckCircle size={16} className="mr-2" />
+                  Re-Approve & Activate
+                </button>
               </>
             )}
             <button
@@ -440,11 +477,178 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onMoveToPending, 
   );
 };
 
+const ConfirmationModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  variant = 'warning'
+}: {
+  isOpen: boolean,
+  onClose: () => void,
+  onConfirm: () => void,
+  title: string,
+  message: string,
+  confirmText?: string,
+  cancelText?: string,
+  variant?: 'danger' | 'warning' | 'info' | 'success'
+}) => {
+  if (!isOpen) return null;
+
+  const themes = {
+    danger: {
+      bg: 'bg-rose-50',
+      iconBg: 'bg-rose-100',
+      iconText: 'text-rose-600',
+      button: 'bg-rose-600 hover:bg-rose-700 shadow-rose-900/20',
+      border: 'border-rose-100'
+    },
+    warning: {
+      bg: 'bg-amber-50',
+      iconBg: 'bg-amber-100',
+      iconText: 'text-amber-600',
+      button: 'bg-amber-600 hover:bg-amber-700 shadow-amber-900/20',
+      border: 'border-amber-100'
+    },
+    info: {
+      bg: 'bg-blue-50',
+      iconBg: 'bg-blue-100',
+      iconText: 'text-blue-600',
+      button: 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-900/20',
+      border: 'border-blue-100'
+    },
+    success: {
+      bg: 'bg-emerald-50',
+      iconBg: 'bg-emerald-100',
+      iconText: 'text-emerald-600',
+      button: 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/20',
+      border: 'border-emerald-100'
+    }
+  };
+
+  const theme = themes[variant];
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-100">
+        <div className={`p-10 ${theme.bg} border-b ${theme.border} flex flex-col items-center text-center`}>
+          <div className={`p-5 ${theme.iconBg} ${theme.iconText} rounded-3xl mb-6 shadow-sm border ${theme.border}`}>
+            {variant === 'danger' ? <Trash2 size={32} /> :
+              variant === 'warning' ? <AlertTriangle size={32} /> :
+                variant === 'success' ? <CheckCircle size={32} /> :
+                  <Info size={32} />}
+          </div>
+          <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-3">{title}</h2>
+          <p className="text-sm text-slate-500 leading-relaxed font-bold">{message}</p>
+        </div>
+        <div className="p-8 bg-white flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={onClose}
+            className="flex-1 px-8 py-4 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={() => { onConfirm(); onClose(); }}
+            className={`flex-1 px-8 py-4 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg ${theme.button}`}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ActionDropdown = ({
+  actions,
+  align = 'right'
+}: {
+  actions: {
+    label: string,
+    icon?: React.ReactNode,
+    onClick: () => void,
+    variant?: 'default' | 'danger' | 'success' | 'warning',
+    disabled?: boolean
+  }[],
+  align?: 'left' | 'right'
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
+      >
+        <MoreVertical size={20} />
+      </button>
+
+      {isOpen && (
+        <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 py-3 z-50 animate-in fade-in zoom-in-95 duration-150`}>
+          {actions.map((action, idx) => (
+            <button
+              key={idx}
+              disabled={action.disabled}
+              onClick={() => {
+                action.onClick();
+                setIsOpen(false);
+              }}
+              className={`w-full flex items-center px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50 ${action.variant === 'danger'
+                ? 'text-rose-600 hover:bg-rose-50'
+                : action.variant === 'success'
+                  ? 'text-emerald-600 hover:bg-emerald-50'
+                  : 'text-slate-600 hover:bg-slate-50'
+                }`}
+            >
+              {action.icon && <span className="mr-3">{action.icon}</span>}
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Applications = () => {
   const { hotels: rawHotels, refreshData, showNotification } = useAppContext();
   const [selectedApp, setSelectedApp] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'suspended'>('pending');
   const [processing, setProcessing] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info' | 'success';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    variant: 'warning'
+  });
+
+  const askConfirm = (title: string, message: string, onConfirm: () => void, variant: 'danger' | 'warning' | 'info' | 'success' = 'warning') => {
+    setConfirmModal({ isOpen: true, title, message, onConfirm, variant });
+  };
 
   const apps = useMemo(() => (rawHotels || []).map((m: any) => ({
     ...m,
@@ -501,6 +705,22 @@ const Applications = () => {
 
   const handleApprove = async (id: string) => {
     console.log('[DEBUG] handleApprove started for ID:', id);
+
+    // Enforce completeness check
+    const hotel = rawHotels.find(h => h.id === id);
+    const { complete, missing } = isProfileComplete(hotel);
+
+    if (!complete) {
+      showNotification('error', 'Cannot approve: Registration is incomplete.');
+      askConfirm(
+        'Incomplete Registration',
+        `This record cannot be approved yet. The following mandatory fields are missing: \n\n• ${missing.join('\n• ')} \n\nPlease notify the member to complete Sections A-F before approval.`,
+        () => { },
+        'info'
+      );
+      return;
+    }
+
     setProcessing(true);
     try {
       // 1. Verify Session & Permissions
@@ -626,6 +846,39 @@ const Applications = () => {
     }
   };
 
+  const handleSuspend = async (id: string) => {
+    askConfirm(
+      'Suspend Membership?',
+      `Are you sure you want to suspend the membership for "${apps.find(a => a.id === id)?.hotelName || 'this hotel'}"? This will hide them from the public directory.`,
+      async () => {
+        setProcessing(true);
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) throw new Error('Auth session lost');
+
+          const { error } = await supabase.from('hotels').update({ status: 'suspended' }).eq('id', id);
+          if (error) throw error;
+
+          await supabase.from('activities').insert({
+            type: 'update',
+            text: `Admin suspended membership for "${apps.find(a => a.id === id)?.hotelName}"`,
+            user_id: session.user.id
+          });
+
+          await refreshData();
+          showNotification('Membership suspended.', 'warning');
+          setSelectedApp(null);
+          setActiveTab('suspended');
+        } catch (err: any) {
+          showNotification('Error: ' + err.message, 'error');
+        } finally {
+          setProcessing(false);
+        }
+      },
+      'warning'
+    );
+  };
+
   const filteredApps = apps.filter(app => app.status === activeTab);
 
   return (
@@ -657,6 +910,12 @@ const Applications = () => {
               >
                 <History size={14} className="mr-2" /> Rejected ({apps.filter(a => a.status === 'rejected').length})
               </button>
+              <button
+                onClick={() => setActiveTab('suspended')}
+                className={`flex items-center justify-center px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all min-w-fit flex-1 lg:flex-none ${activeTab === 'suspended' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <AlertTriangle size={14} className="mr-2" /> Suspended ({apps.filter(a => a.status === 'suspended').length})
+              </button>
             </div>
           </div>
 
@@ -680,6 +939,7 @@ const Applications = () => {
                 <th className="px-10 py-5">Corporate Head</th>
                 <th className="px-10 py-5">Submission</th>
                 <th className="px-10 py-5">Star Class</th>
+                <th className="px-10 py-5">Completeness</th>
                 <th className="px-10 py-5 text-right">Review Record</th>
               </tr>
             </thead>
@@ -697,27 +957,47 @@ const Applications = () => {
                       {[...Array(parseInt(app.stars || 4))].map((_, i) => <Star key={i} size={10} fill="currentColor" />)}
                     </div>
                   </td>
+                  <td className="px-10 py-6">
+                    {(() => {
+                      const { complete } = isProfileComplete(app);
+                      return (
+                        <span className={`px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${complete ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {complete ? 'Complete' : 'Incomplete'}
+                        </span>
+                      );
+                    })()}
+                  </td>
                   <td className="px-10 py-6 text-right">
-                    <div className="flex justify-end space-x-2">
-                      <button
-                        onClick={() => setSelectedApp(app)}
-                        className={`flex items-center px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${app.status === 'pending' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20 hover:bg-slate-900' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                          }`}
-                      >
-                        <Eye size={14} className="mr-2" />
-                        {app.status === 'pending' ? 'Review & Approve' : app.status === 'rejected' ? 'Restore / Approve' : 'View Archive'}
-                      </button>
-                      {app.status === 'rejected' && (
-                        <button
-                          disabled={processing}
-                          onClick={() => handleMoveToPending(app.id)}
-                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
-                          title="Restore to Pending"
-                        >
-                          <History size={16} />
-                        </button>
-                      )}
-                    </div>
+                    <ActionDropdown
+                      actions={[
+                        {
+                          label: app.status === 'pending' ? 'Review & Approve' : app.status === 'rejected' ? 'Restore / Approve' : 'View Details',
+                          icon: <Eye size={14} />,
+                          onClick: () => setSelectedApp(app)
+                        },
+                        {
+                          label: 'Approve Membership',
+                          icon: <CheckCircle2 size={14} />,
+                          variant: 'success',
+                          disabled: app.status === 'approved',
+                          onClick: () => askConfirm('Approve Membership?', `Are you sure you want to approve "${app.hotelName}"?`, () => handleApprove(app.id), 'success')
+                        },
+                        {
+                          label: 'Decline Registration',
+                          icon: <XCircle size={14} />,
+                          variant: 'danger',
+                          disabled: app.status === 'rejected',
+                          onClick: () => askConfirm('Decline Registration?', `Are you sure you want to decline the registration for "${app.hotelName}"?`, () => handleReject(app.id), 'danger')
+                        },
+                        {
+                          label: 'Suspend Application',
+                          icon: <AlertTriangle size={14} />,
+                          variant: 'warning',
+                          disabled: app.status === 'suspended',
+                          onClick: () => handleSuspend(app.id)
+                        }
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}
@@ -761,18 +1041,238 @@ const Applications = () => {
         </div>
       )}
 
-      {selectedApp && <ApplicationModal app={selectedApp} onClose={() => setSelectedApp(null)} onApprove={handleApprove} onReject={handleReject} onMoveToPending={handleMoveToPending} isProcessing={processing} />}
+      {selectedApp && (
+        <ApplicationModal
+          app={selectedApp}
+          onClose={() => setSelectedApp(null)}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          onSuspend={handleSuspend}
+          onMoveToPending={handleMoveToPending}
+          isProcessing={processing}
+        />
+      )}
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+      />
     </div>
   );
 };
 
 const MembersManagement = () => {
-  const { members: rawMembers } = useAppContext();
+  const { hotels: rawHotels, refreshData, showNotification, user } = useAppContext();
+  const navigate = useNavigate();
+  const [processing, setProcessing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCity, setSelectedCity] = useState('all');
+  const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' }>({
+    field: 'hotelName',
+    direction: 'asc'
+  });
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info' | 'success';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    variant: 'warning'
+  });
 
-  const members = useMemo(() => (rawMembers || []).map((m: any) => ({
-    ...m,
-    hotelName: m.hotel_name
-  })), [rawMembers]);
+  const askConfirm = (title: string, message: string, onConfirm: () => void, variant: 'danger' | 'warning' | 'info' | 'success' = 'warning') => {
+    setConfirmModal({ isOpen: true, title, message, onConfirm, variant });
+  };
+
+  const logActivity = async (text: string) => {
+    if (!user) return;
+    await supabase.from('activities').insert({
+      type: 'update',
+      text,
+      user_id: user.id
+    });
+  };
+
+  const handleApproveMember = async (id: string, hotelName: string) => {
+    // Enforce completeness check
+    const hotel = rawHotels.find(h => h.id === id);
+    const { complete, missing } = isProfileComplete(hotel);
+
+    if (!complete) {
+      showNotification('error', `Cannot approve "${hotelName}": Registration incomplete.`);
+      askConfirm(
+        'Incomplete Profile',
+        `The profile for "${hotelName}" is incomplete. Missing fields: \n\n• ${missing.join('\n• ')}`,
+        () => { },
+        'info'
+      );
+      return;
+    }
+
+    askConfirm(
+      'Approve Membership?',
+      `Confirm approval for "${hotelName}"? This will mark them as active in the directory.`,
+      async () => {
+        setProcessing(true);
+        const { error } = await supabase
+          .from('hotels')
+          .update({ status: 'approved' })
+          .eq('id', id);
+
+        if (error) {
+          showNotification('error', `Failed to approve: ${error.message}`);
+        } else {
+          await logActivity(`Approved membership for "${hotelName}"`);
+          showNotification('success', `${hotelName} is now an active member.`);
+          refreshData();
+        }
+        setProcessing(false);
+      },
+      'success'
+    );
+  };
+
+  const handleRejectMember = async (id: string, hotelName: string) => {
+    askConfirm(
+      'Decline Membership?',
+      `Are you sure you want to decline "${hotelName}"? They will be moved to the rejected list.`,
+      async () => {
+        setProcessing(true);
+        const { error } = await supabase
+          .from('hotels')
+          .update({ status: 'rejected' })
+          .eq('id', id);
+
+        if (error) {
+          showNotification('error', `Failed to decline: ${error.message}`);
+        } else {
+          await logActivity(`Declined membership for "${hotelName}"`);
+          showNotification('warning', `${hotelName} membership has been declined.`);
+          refreshData();
+        }
+        setProcessing(false);
+      },
+      'danger'
+    );
+  };
+
+  const handleSuspendMember = async (id: string, hotelName: string) => {
+    askConfirm(
+      'Suspend Membership?',
+      `Are you sure you want to suspend "${hotelName}"? They will lose dashboard access immediately.`,
+      async () => {
+        setProcessing(true);
+        const { error } = await supabase
+          .from('hotels')
+          .update({ status: 'suspended' })
+          .eq('id', id);
+
+        if (error) {
+          showNotification('error', `Failed to suspend: ${error.message}`);
+        } else {
+          await logActivity(`Suspended membership for "${hotelName}"`);
+          showNotification('success', `${hotelName} has been suspended.`);
+          refreshData();
+        }
+        setProcessing(false);
+      },
+      'danger'
+    );
+  };
+
+  const handleDeleteMember = async (id: string, hotelName: string) => {
+    askConfirm(
+      'Delete Member Record?',
+      `This will permanently remove "${hotelName}" from the official directory. This action is irreversible.`,
+      async () => {
+        setProcessing(true);
+        const { error } = await supabase
+          .from('hotels')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          showNotification('error', `Failed to delete: ${error.message}`);
+        } else {
+          await logActivity(`Deleted member record for "${hotelName}"`);
+          showNotification('success', `${hotelName} has been removed from directory.`);
+          refreshData();
+        }
+        setProcessing(false);
+      },
+      'danger'
+    );
+  };
+
+  const cities = useMemo(() => {
+    const uniqueCities = Array.from(new Set((rawHotels || []).map((m: any) => m.city).filter(Boolean)));
+    return ['all', ...uniqueCities.sort()];
+  }, [rawHotels]);
+
+  const members = useMemo(() => {
+    let list = (rawHotels || []).map((m: any) => ({
+      ...m,
+      hotelName: m.hotel_name
+    }));
+
+    // Status Filter
+    if (statusFilter !== 'all') {
+      list = list.filter(m => m.status === statusFilter);
+    }
+
+    // City Filter
+    if (selectedCity !== 'all') {
+      list = list.filter(m => m.city === selectedCity);
+    }
+
+    // Search Filter
+    if (searchTerm) {
+      const lowSearch = searchTerm.toLowerCase();
+      list = list.filter(m =>
+        m.hotelName?.toLowerCase().includes(lowSearch) ||
+        m.city?.toLowerCase().includes(lowSearch) ||
+        m.id?.toLowerCase().includes(lowSearch)
+      );
+    }
+
+    // Sorting
+    list.sort((a: any, b: any) => {
+      const field = sortConfig.field;
+      let valA = a[field] || '';
+      let valB = b[field] || '';
+
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return list;
+  }, [rawHotels, statusFilter, searchTerm, selectedCity, sortConfig]);
+
+  const toggleSort = (field: string) => {
+    setSortConfig(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortConfig.field !== field) return <ChevronDown size={12} className="opacity-20" />;
+    return sortConfig.direction === 'asc' ? <ChevronUp size={12} className="text-emerald-500" /> : <ChevronDown size={12} className="text-emerald-500" />;
+  };
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-slate-100">
@@ -781,19 +1281,101 @@ const MembersManagement = () => {
           <h2 className="text-lg md:text-xl font-bold text-slate-900">Official Member Directory</h2>
           <p className="text-slate-500 text-xs md:text-sm">Active certified members</p>
         </div>
-        <div className="flex space-x-2 md:space-x-4 w-full sm:w-auto">
-          <button className="flex-1 sm:flex-none px-3 md:px-4 py-2 border border-slate-200 rounded-xl font-bold text-[10px] md:text-sm text-slate-600 hover:bg-slate-50">Export</button>
-          <Link to="/register" className="flex-1 sm:flex-none bg-emerald-600 text-white px-3 md:px-5 py-2 rounded-xl font-bold text-[10px] md:text-sm hover:bg-emerald-700 text-center">Add Member</Link>
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 md:space-x-4 w-full sm:w-auto items-stretch sm:items-center">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input
+              type="text"
+              placeholder="Search by hotel, city, or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <XCircle size={14} />
+              </button>
+            )}
+          </div>
+          <div className="relative flex-1 sm:w-40">
+            <select
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+              className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none appearance-none font-bold text-slate-600"
+            >
+              {cities.map(city => (
+                <option key={city} value={city}>{city === 'all' ? 'All Cities' : city}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+          </div>
+          <button className="px-3 md:px-4 py-2 border border-slate-200 rounded-xl font-bold text-[10px] md:text-sm text-slate-600 hover:bg-slate-50">Export</button>
+          <Link to="/register" className="bg-emerald-600 text-white px-3 md:px-5 py-2 rounded-xl font-bold text-[10px] md:text-sm hover:bg-emerald-700 text-center">Add Member</Link>
+        </div>
+      </div>
+      <div className="p-4 md:p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex bg-slate-50 p-1 rounded-2xl w-full md:w-auto">
+          {['all', 'approved', 'pending', 'suspended', 'rejected'].map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`flex-1 md:flex-none px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${statusFilter === status
+                ? 'bg-white text-emerald-600 shadow-sm'
+                : 'text-slate-400 hover:text-slate-600'
+                }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          Showing {members.length} {statusFilter === 'all' ? 'total' : statusFilter} records
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left min-w-[600px]">
           <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
             <tr>
-              <th className="px-4 md:px-8 py-4">Hotel Name</th>
-              <th className="px-4 md:px-8 py-4">Location</th>
-              <th className="px-4 md:px-8 py-4">Rating</th>
-              <th className="px-4 md:px-8 py-4">Status</th>
+              <th
+                className="px-4 md:px-8 py-4 cursor-pointer hover:bg-slate-100/50 transition-colors group"
+                onClick={() => toggleSort('hotelName')}
+              >
+                <div className="flex items-center space-x-2">
+                  <span>Hotel Name</span>
+                  <SortIcon field="hotelName" />
+                </div>
+              </th>
+              <th
+                className="px-4 md:px-8 py-4 cursor-pointer hover:bg-slate-100/50 transition-colors group"
+                onClick={() => toggleSort('city')}
+              >
+                <div className="flex items-center space-x-2">
+                  <span>Location</span>
+                  <SortIcon field="city" />
+                </div>
+              </th>
+              <th
+                className="px-4 md:px-8 py-4 cursor-pointer hover:bg-slate-100/50 transition-colors group"
+                onClick={() => toggleSort('stars')}
+              >
+                <div className="flex items-center space-x-2">
+                  <span>Rating</span>
+                  <SortIcon field="stars" />
+                </div>
+              </th>
+              <th
+                className="px-4 md:px-8 py-4 cursor-pointer hover:bg-slate-100/50 transition-colors group"
+                onClick={() => toggleSort('status')}
+              >
+                <div className="flex items-center space-x-2">
+                  <span>Status</span>
+                  <SortIcon field="status" />
+                </div>
+              </th>
+              <th className="px-4 md:px-8 py-4">Completeness</th>
               <th className="px-4 md:px-8 py-4 text-right">Actions</th>
             </tr>
           </thead>
@@ -802,7 +1384,7 @@ const MembersManagement = () => {
               <tr key={member.id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-4 md:px-8 py-4 md:py-5">
                   <div className="font-bold text-slate-900 text-sm">{member.hotelName}</div>
-                  <div className="text-[9px] text-slate-400 uppercase font-black">ID: {member.id}</div>
+                  <div className="text-[9px] text-slate-400 uppercase font-black tracking-tighter">ID: {member.id}</div>
                 </td>
                 <td className="px-4 md:px-8 py-4 md:py-5 text-slate-500 text-sm">{member.city}</td>
                 <td className="px-4 md:px-8 py-4 md:py-5">
@@ -811,26 +1393,99 @@ const MembersManagement = () => {
                   </div>
                 </td>
                 <td className="px-4 md:px-8 py-4 md:py-5">
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">
-                    ACTIVE
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest African-accents Africa-badge Africans-Badges ${member.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                    member.status === 'suspended' ? 'bg-amber-100 text-amber-700' :
+                      member.status === 'rejected' ? 'bg-rose-100 text-rose-700' :
+                        member.status === 'pending' ? 'bg-indigo-100 text-indigo-700' :
+                          'bg-slate-100 text-slate-500'
+                    }`}>
+                    {member.status || 'ACTIVE'}
                   </span>
                 </td>
+                <td className="px-4 md:px-8 py-4 md:py-5">
+                  {(() => {
+                    const hotel = rawHotels?.find((h: any) => h.id === member.id);
+                    const { complete } = isProfileComplete(hotel);
+                    return (
+                      <span className={`px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${complete ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {complete ? 'Complete' : 'Incomplete'}
+                      </span>
+                    );
+                  })()}
+                </td>
                 <td className="px-4 md:px-8 py-4 md:py-5 text-right">
-                  <div className="flex justify-end space-x-1">
-                    <Link to={`/members/${member.id}`} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"><Eye size={14} /></Link>
-                    <button className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
-                  </div>
+                  <ActionDropdown
+                    actions={[
+                      {
+                        label: 'View Profile',
+                        icon: <Eye size={14} />,
+                        onClick: () => navigate(`/members/${member.id}`)
+                      },
+                      {
+                        label: member.status === 'pending' ? 'Approve Membership' : 'Mark as Approved',
+                        icon: <CheckCircle2 size={14} />,
+                        variant: 'success',
+                        disabled: member.status === 'approved' || processing,
+                        onClick: () => handleApproveMember(member.id, member.hotelName)
+                      },
+                      {
+                        label: 'Decline Membership',
+                        icon: <XCircle size={14} />,
+                        variant: 'danger',
+                        disabled: member.status === 'rejected' || processing,
+                        onClick: () => handleRejectMember(member.id, member.hotelName)
+                      },
+                      {
+                        label: 'Suspend Member',
+                        icon: <AlertTriangle size={14} />,
+                        variant: 'warning',
+                        disabled: member.status === 'suspended' || processing,
+                        onClick: () => handleSuspendMember(member.id, member.hotelName)
+                      },
+                      {
+                        label: 'Permanent Delete',
+                        icon: <Trash2 size={14} />,
+                        variant: 'danger',
+                        disabled: processing,
+                        onClick: () => handleDeleteMember(member.id, member.hotelName)
+                      }
+                    ]}
+                  />
                 </td>
               </tr>
             ))}
             {members.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-8 py-12 text-center text-slate-400 italic">No approved members found in directory.</td>
+                <td colSpan={6} className="px-8 py-12 text-center">
+                  <div className="flex flex-col items-center justify-center text-slate-400">
+                    <Search size={48} className="mb-4 opacity-10" />
+                    <p className="italic font-medium">No members found matching your search or filters.</p>
+                    <button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setSelectedCity('all');
+                        setStatusFilter('all');
+                      }}
+                      className="mt-4 text-emerald-600 font-bold hover:underline text-xs uppercase tracking-widest"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+      />
     </div>
   );
 };
@@ -839,6 +1494,7 @@ const UserManagement = () => {
   const { profiles: users, loading, refreshData, showNotification } = useAppContext();
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'admin' });
+  const [autoApprove, setAutoApprove] = useState(false);
   const [creating, setCreating] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [passwordTarget, setPasswordTarget] = useState<any>(null);
@@ -846,48 +1502,68 @@ const UserManagement = () => {
   const [settingPassword, setSettingPassword] = useState(false);
   const [roleTarget, setRoleTarget] = useState<any>(null);
   const [updatingRole, setUpdatingRole] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info' | 'success';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    variant: 'warning'
+  });
+
+  const askConfirm = (title: string, message: string, onConfirm: () => void, variant: 'danger' | 'warning' | 'info' | 'success' = 'warning') => {
+    setConfirmModal({ isOpen: true, title, message, onConfirm, variant });
+  };
 
   const { user: currentUser } = useAppContext();
 
   // We no longer need fetchUsers locally
 
   const handleToggleSecurity = async (userId: string, currentStatus: boolean) => {
-    if (!window.confirm(`Are you sure you want to mark this account as ${currentStatus ? 'Pending Change' : 'Secure'} manually ? `)) return;
+    askConfirm(
+      currentStatus ? 'Update Security Status' : 'Verify Account Security',
+      `Are you sure you want to mark this account as ${currentStatus ? 'Pending Change' : 'Secure'}?`,
+      async () => {
+        try {
+          const { error } = await supabase
+            .from('profiles')
+            .update({ security_verified: !currentStatus })
+            .eq('id', userId);
 
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ password_changed: !currentStatus })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      // Log activity
-      await supabase.from('activities').insert({
-        type: 'update',
-        text: `Manually updated security status for ${users.find(u => u.id === userId)?.name || 'a user'}`
-      });
-
-      await refreshData();
-      showNotification(`Account marked as ${currentStatus ? 'Pending' : 'Secure'}.`, 'success');
-    } catch (err: any) {
-      console.error('Error toggling security status:', err.message);
-      showNotification('Error: ' + err.message, 'error');
-    }
+          if (error) throw error;
+          await refreshData();
+          showNotification('User security status updated.', 'success');
+        } catch (err: any) {
+          showNotification(err.message, 'error');
+        }
+      },
+      'info'
+    );
   };
 
   const handleAdminResetPassword = async (userEmail: string) => {
-    if (!window.confirm(`Send a password reset link to ${userEmail}?`)) return;
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: `${window.location.origin}/login`,
-      });
-      if (error) throw error;
-      showNotification('Password reset link sent successfully.', 'success');
-    } catch (err: any) {
-      console.error('Admin reset error:', err);
-      showNotification('Failed to send reset link: ' + err.message, 'error');
-    }
+    askConfirm(
+      'Reset Password?',
+      `Are you sure you want to send a secure password reset link to ${userEmail}?`,
+      async () => {
+        try {
+          const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+            redirectTo: `${window.location.origin}/#/login?type=recovery`,
+          });
+          if (error) throw error;
+          showNotification('Password reset link sent to user email.', 'success');
+        } catch (err: any) {
+          showNotification(err.message, 'error');
+        }
+      },
+      'warning'
+    );
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -907,6 +1583,24 @@ const UserManagement = () => {
       });
 
       if (error) throw error;
+
+      // If Auto-Approve is checked, create an empty approved hotel record
+      if (autoApprove && data.user) {
+        const { error: hotelError } = await supabase
+          .from('hotels')
+          .insert([{
+            user_id: data.user.id,
+            hotel_name: newUser.name + " (Pending Setup)",
+            email: newUser.email,
+            status: 'approved',
+            created_at: new Date().toISOString()
+          }]);
+
+        if (hotelError) {
+          console.error('Error auto-approving hotel:', hotelError);
+          showNotification('User created, but failed to create hotel record.', 'warning');
+        }
+      }
 
       // Log activity
       await supabase.from('activities').insert({
@@ -1001,6 +1695,47 @@ const UserManagement = () => {
     } finally {
       setUpdatingRole(false);
     }
+  };
+
+  const handleDeleteUser = async (user: any) => {
+    askConfirm(
+      'Permanent Deletion',
+      `CRITICAL: Are you sure you want to PERMANENTLY delete the account for "${user.name || user.email}"? This will also delete their hotel record and all activity logs. This action cannot be undone.`,
+      async () => {
+        setDeleting(true);
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) throw new Error('Session lost');
+
+          const response = await fetch('https://mvduiyvpjkmigvkelnzv.supabase.co/functions/v1/admin-delete-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify({ userId: user.id })
+          });
+
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Failed to delete user');
+
+          await supabase.from('activities').insert({
+            type: 'admin_action',
+            text: `Super Admin deleted account for ${user.email}`,
+            user_id: session.user.id
+          });
+
+          showNotification('User and associated data permanently deleted.', 'success');
+          await refreshData();
+        } catch (err: any) {
+          console.error('Deletion error:', err);
+          showNotification('Error deleting user: ' + err.message, 'error');
+        } finally {
+          setDeleting(false);
+        }
+      },
+      'danger'
+    );
   };
 
   return (
@@ -1140,6 +1875,25 @@ const UserManagement = () => {
                                   <Settings size={16} className="mr-3 text-slate-400 group-hover:text-emerald-500" /> Manage Permissions
                                 </button>
                               )}
+
+                              <div className="h-px bg-slate-50 my-1"></div>
+
+                              <button
+                                disabled={deleting}
+                                onClick={() => {
+                                  handleDeleteUser(u);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full px-6 py-4 text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center transition-all group disabled:opacity-50"
+                              >
+                                {deleting ? (
+                                  <div className="w-4 h-4 border-2 border-rose-600/20 border-t-rose-600 rounded-full animate-spin mr-3"></div>
+                                ) : (
+                                  <Trash2 size={16} className="mr-3 text-rose-400 group-hover:text-rose-600" />
+                                )}
+                                {deleting ? 'Deleting...' : 'Delete Account'}
+                              </button>
+
                               <div className="mt-2 px-4">
                                 <button
                                   onClick={() => setOpenMenuId(null)}
@@ -1283,21 +2037,48 @@ const UserManagement = () => {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+      />
     </div>
   );
 };
 
 const EventsManagement = () => {
-  const { events: contextEvents, refreshData, showNotification } = useAppContext();
-  const [events, setEvents] = useState<any[]>([]);
+  const { user, events: contextEvents, refreshData, showNotification } = useAppContext();
+  const isAdmin = user?.role === 'admin' || user?.role === 'super-admin';
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [viewingEvent, setViewingEvent] = useState<any>(null);
 
-  // Synchronize local events state with context events
-  useEffect(() => {
-    setEvents(contextEvents);
-  }, [contextEvents]);
+  const events = useMemo(() => {
+    if (isAdmin) return contextEvents;
+    return contextEvents.filter(e => e.user_id === user?.id);
+  }, [contextEvents, isAdmin, user]);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info' | 'success';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    variant: 'warning'
+  });
+
+  const askConfirm = (title: string, message: string, onConfirm: () => void, variant: 'danger' | 'warning' | 'info' | 'success' = 'warning') => {
+    setConfirmModal({ isOpen: true, title, message, onConfirm, variant });
+  };
 
   const initialFormState = {
     title: '',
@@ -1315,6 +2096,13 @@ const EventsManagement = () => {
   };
 
   const [formEvent, setFormEvent] = useState(initialFormState);
+  const [expandedDays, setExpandedDays] = useState<number[]>([0]);
+
+  const toggleDayExpanded = (index: number) => {
+    setExpandedDays(prev =>
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
+  };
 
   useEffect(() => {
     // This useEffect is no longer needed as events are synced from context
@@ -1336,28 +2124,33 @@ const EventsManagement = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
-      try {
-        const { error } = await supabase
-          .from('events')
-          .delete()
-          .eq('id', id);
+    askConfirm(
+      'Delete Event?',
+      'Are you sure you want to delete this event? This action cannot be undone and will remove it from the website.',
+      async () => {
+        try {
+          const { error } = await supabase
+            .from('events')
+            .delete()
+            .eq('id', id);
 
-        if (error) throw error;
+          if (error) throw error;
 
-        // Log activity
-        await supabase.from('activities').insert({
-          type: 'event',
-          text: `Deleted event: "${events.find(e => e.id === id)?.title || 'an event'}"`
-        });
+          // Log activity
+          await supabase.from('activities').insert({
+            type: 'event',
+            text: `Deleted event: "${events.find(e => e.id === id)?.title || 'an event'}"`
+          });
 
-        refreshData();
-        showNotification('Event deleted successfully.', 'success');
-      } catch (err: any) {
-        console.error('Error deleting event:', err.message);
-        showNotification('Error deleting event.', 'error');
-      }
-    }
+          refreshData();
+          showNotification('Event permanently deleted.', 'success');
+        } catch (err: any) {
+          console.error('Error deleting event:', err.message);
+          showNotification('Error deleting event.', 'error');
+        }
+      },
+      'danger'
+    );
   };
 
   const handleDuplicate = async (event: any) => {
@@ -1370,7 +2163,8 @@ const EventsManagement = () => {
       time: event.time,
       image: event.image,
       category: event.category,
-      status: 'Draft',
+      status: isAdmin ? 'Draft' : 'Pending',
+      user_id: user?.id,
       schedule: event.schedule,
       speakers: event.speakers
     };
@@ -1397,29 +2191,40 @@ const EventsManagement = () => {
     }
   };
 
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    const actionLabel = newStatus === 'Approved' ? 'Approve' : newStatus === 'Declined' ? 'Decline' : newStatus === 'Suspended' ? 'Suspend' : 'Update';
+
+    askConfirm(
+      `${actionLabel} Event?`,
+      `Are you sure you want to set this event to "${newStatus}"?`,
+      async () => {
+        try {
+          const { error } = await supabase
+            .from('events')
+            .update({ status: newStatus })
+            .eq('id', id);
+
+          if (error) throw error;
+
+          // Log activity
+          await supabase.from('activities').insert({
+            type: 'event',
+            text: `${newStatus} event: "${events.find(e => e.id === id)?.title || 'an event'}"`
+          });
+
+          refreshData();
+          showNotification(`Event ${newStatus.toLowerCase()} successfully!`, 'success');
+        } catch (err: any) {
+          console.error(`Error changing event status:`, err.message);
+          showNotification(`Error updating event status.`, 'error');
+        }
+      },
+      newStatus === 'Approved' ? 'success' : newStatus === 'Declined' ? 'danger' : 'warning'
+    );
+  };
+
   const handlePublish = async (id: string) => {
-    if (window.confirm('Ready to publish this event to the live website?')) {
-      try {
-        const { error } = await supabase
-          .from('events')
-          .update({ status: 'Published' })
-          .eq('id', id);
-
-        if (error) throw error;
-
-        // Log activity
-        await supabase.from('activities').insert({
-          type: 'event',
-          text: `Published event: "${events.find(e => e.id === id)?.title || 'an event'}"`
-        });
-
-        refreshData();
-        showNotification('Event published successfully!', 'success');
-      } catch (err: any) {
-        console.error('Error publishing event:', err.message);
-        showNotification('Error publishing event.', 'error');
-      }
-    }
+    handleStatusChange(id, 'Approved');
   };
 
   const handleEventImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1434,23 +2239,29 @@ const EventsManagement = () => {
 
   const openEditForm = (event: any) => {
     setEditingEventId(event.id);
+    const schedule = Array.isArray(event.schedule) && event.schedule.length > 0
+      ? event.schedule
+      : [{ date: event.date || '', time: event.time || '', agenda: Array.isArray(event.agenda) ? event.agenda : [] }];
+
     setFormEvent({
       ...event,
-      schedule: Array.isArray(event.schedule) && event.schedule.length > 0
-        ? event.schedule
-        : [{ date: event.date || '', time: event.time || '', agenda: Array.isArray(event.agenda) ? event.agenda : [] }],
+      fullContent: event.full_content || event.fullContent || '',
+      schedule,
       speakers: Array.isArray(event.speakers) && event.speakers.length > 0
         ? event.speakers
         : [{ name: '', role: '', image: '' }]
     });
+    setExpandedDays([0]); // Expand the first day by default
     setShowAddForm(true);
   };
 
   const handleAddScheduleItem = () => {
+    const newSchedule = [...(formEvent.schedule || []), { date: '', time: '', agenda: [{ time: '', activity: '' }] }];
     setFormEvent({
       ...formEvent,
-      schedule: [...(formEvent.schedule || []), { date: '', time: '', agenda: [{ time: '', activity: '' }] }]
+      schedule: newSchedule
     });
+    setExpandedDays(prev => [...prev, newSchedule.length - 1]);
   };
 
   const handleRemoveScheduleItem = (index: number) => {
@@ -1486,6 +2297,34 @@ const EventsManagement = () => {
     setFormEvent({ ...formEvent, speakers: updated });
   };
 
+  const handleMoveScheduleItem = (index: number, direction: 'up' | 'down') => {
+    const updated = [...(formEvent.schedule || [])];
+    const newIdx = direction === 'up' ? index - 1 : index + 1;
+    if (newIdx >= 0 && newIdx < updated.length) {
+      [updated[index], updated[newIdx]] = [updated[newIdx], updated[index]];
+      setFormEvent({ ...formEvent, schedule: updated });
+      // Update expanded states accordingly
+      setExpandedDays(prev => prev.map(i => {
+        if (i === index) return newIdx;
+        if (i === newIdx) return index;
+        return i;
+      }));
+    }
+  };
+
+  const handleMoveDailyAgendaItem = (scheduleIdx: number, agendaIdx: number, direction: 'up' | 'down') => {
+    const updated = [...(formEvent.schedule || [])];
+    if (updated[scheduleIdx]) {
+      const agenda = [...(updated[scheduleIdx].agenda || [])];
+      const newIdx = direction === 'up' ? agendaIdx - 1 : agendaIdx + 1;
+      if (newIdx >= 0 && newIdx < agenda.length) {
+        [agenda[agendaIdx], agenda[newIdx]] = [agenda[newIdx], agenda[agendaIdx]];
+        updated[scheduleIdx].agenda = agenda;
+        setFormEvent({ ...formEvent, schedule: updated });
+      }
+    }
+  };
+
   const handleSpeakerImageUpload = (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1501,8 +2340,8 @@ const EventsManagement = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleSaveEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveEvent = async (e: React.FormEvent, forcedStatus?: 'Draft' | 'Pending') => {
+    if (e && e.preventDefault) e.preventDefault();
     const primarySchedule = (formEvent.schedule && formEvent.schedule.length > 0)
       ? formEvent.schedule[0]
       : { date: '', time: '' };
@@ -1513,12 +2352,13 @@ const EventsManagement = () => {
       title: formEvent.title,
       location: formEvent.location,
       description: formEvent.description,
-      full_content: formEvent.fullContent || formEvent.full_content,
+      full_content: formEvent.fullContent || formEvent.full_content || '',
       category: formEvent.category,
-      status: formEvent.status,
+      status: forcedStatus || (editingEventId ? formEvent.status : (isAdmin ? 'Approved' : 'Pending')),
+      user_id: user?.id,
       image: finalImage,
-      schedule: formEvent.schedule,
-      speakers: formEvent.speakers,
+      schedule: (formEvent.schedule || []).filter(s => s.date || s.time || (s.agenda && s.agenda.some((a: any) => a.time || a.activity))),
+      speakers: (formEvent.speakers || []).filter(s => s.name || s.role),
       date: primarySchedule.date || formEvent.date,
       time: primarySchedule.time || formEvent.time
     };
@@ -1567,6 +2407,7 @@ const EventsManagement = () => {
     setShowAddForm(false);
     setEditingEventId(null);
     setFormEvent(initialFormState);
+    setExpandedDays([0]);
   };
 
   const renderEventDetails = (event: any) => {
@@ -1682,12 +2523,12 @@ const EventsManagement = () => {
           </div>
 
           <div className="pt-10 border-t border-slate-100 flex justify-between items-center">
-            {event.status === 'Draft' ? (
+            {(event.status === 'Draft' || (isAdmin && event.status === 'Pending')) ? (
               <button
                 onClick={() => handlePublish(event.id)}
                 className="px-10 py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 transition-all uppercase tracking-widest text-xs flex items-center shadow-lg"
               >
-                <CheckCircle size={18} className="mr-2" /> Publish Live
+                <CheckCircle size={18} className="mr-2" /> {event.status === 'Draft' ? 'Publish Live' : 'Approve & Publish'}
               </button>
             ) : <div />}
             <button
@@ -1791,17 +2632,29 @@ const EventsManagement = () => {
               <div className="space-y-12">
                 {(formEvent.schedule || []).map((item, scheduleIdx) => (
                   <div key={scheduleIdx} className="bg-slate-50/50 p-8 md:p-10 rounded-[2.5rem] border border-slate-100 relative animate-in slide-in-from-left-4 duration-300">
-                    <div className="absolute -top-4 -left-4 w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center font-black shadow-lg">
-                      {scheduleIdx + 1}
+                    <div className="absolute -top-4 -left-4 flex items-center gap-2">
+                      <div className="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center font-black shadow-lg">
+                        {scheduleIdx + 1}
+                      </div>
+                      <div className="flex bg-white rounded-xl shadow-sm border border-slate-100 p-1">
+                        <button type="button" disabled={scheduleIdx === 0} onClick={() => handleMoveScheduleItem(scheduleIdx, 'up')} className="p-1.5 text-slate-400 hover:text-emerald-600 disabled:opacity-30 transition-all"><ArrowUp size={16} /></button>
+                        <button type="button" disabled={scheduleIdx === (formEvent.schedule || []).length - 1} onClick={() => handleMoveScheduleItem(scheduleIdx, 'down')} className="p-1.5 text-slate-400 hover:text-emerald-600 disabled:opacity-30 transition-all"><ArrowDown size={16} /></button>
+                      </div>
                     </div>
 
-                    {(formEvent.schedule || []).length > 1 && (
-                      <button type="button" onClick={() => handleRemoveScheduleItem(scheduleIdx)} className="absolute top-6 right-6 p-3 bg-white text-rose-300 hover:text-rose-500 hover:bg-rose-50 border border-slate-100 rounded-xl transition-all shadow-sm">
-                        <Trash size={18} />
+                    <div className="absolute top-6 right-6 flex items-center gap-2">
+                      <button type="button" onClick={() => toggleDayExpanded(scheduleIdx)} className="p-3 bg-white text-emerald-600 hover:bg-emerald-50 border border-slate-100 rounded-xl transition-all shadow-sm flex items-center gap-2 font-bold text-xs uppercase tracking-widest">
+                        {expandedDays.includes(scheduleIdx) ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                        {expandedDays.includes(scheduleIdx) ? 'Collapse' : 'Expand Details'}
                       </button>
-                    )}
+                      {(formEvent.schedule || []).length > 1 && (
+                        <button type="button" onClick={() => handleRemoveScheduleItem(scheduleIdx)} className="p-3 bg-white text-rose-300 hover:text-rose-500 hover:bg-rose-50 border border-slate-100 rounded-xl transition-all shadow-sm">
+                          <Trash size={18} />
+                        </button>
+                      )}
+                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 pt-4">
                       <div>
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Schedule Date</label>
                         <input required type="date" value={item.date} onChange={e => {
@@ -1820,42 +2673,50 @@ const EventsManagement = () => {
                       </div>
                     </div>
 
-                    <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-                      <div className="flex items-center justify-between mb-6">
-                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center">
-                          <ListTodo size={16} className="mr-2 text-emerald-500" /> Day {scheduleIdx + 1} Itinerary
-                        </h4>
-                        <button type="button" onClick={() => handleAddDailyAgendaItem(scheduleIdx)} className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:text-emerald-700 flex items-center">
-                          <Plus size={12} className="mr-1" /> Add Activity
-                        </button>
-                      </div>
+                    {expandedDays.includes(scheduleIdx) && (
+                      <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="flex items-center justify-between mb-6">
+                          <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center">
+                            <ListTodo size={16} className="mr-2 text-emerald-500" /> Day {scheduleIdx + 1} Itinerary
+                          </h4>
+                          <button type="button" onClick={() => handleAddDailyAgendaItem(scheduleIdx)} className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:text-emerald-700 flex items-center">
+                            <Plus size={12} className="mr-1" /> Add Activity
+                          </button>
+                        </div>
 
-                      <div className="space-y-4">
-                        {(item.agenda || []).map((agendaItem: any, agendaIdx: number) => (
-                          <div key={agendaIdx} className="flex gap-4 items-center animate-in slide-in-from-top-2">
-                            <div className="w-32">
-                              <input required type="text" placeholder="Time" value={agendaItem.time} onChange={e => {
-                                const updated = [...(formEvent.schedule || [])];
-                                updated[scheduleIdx].agenda[agendaIdx].time = e.target.value;
-                                setFormEvent({ ...formEvent, schedule: updated });
-                              }} className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl outline-none text-xs font-bold" />
+                        <div className="space-y-4">
+                          {(item.agenda || []).map((agendaItem: any, agendaIdx: number) => (
+                            <div key={agendaIdx} className="flex gap-4 items-center animate-in slide-in-from-top-2 h-10 group/agenda">
+                              <div className="flex flex-col opacity-0 group-hover/agenda:opacity-100 transition-opacity">
+                                <button type="button" disabled={agendaIdx === 0} onClick={() => handleMoveDailyAgendaItem(scheduleIdx, agendaIdx, 'up')} className="text-slate-300 hover:text-emerald-600 disabled:opacity-0 transition-all"><ChevronUp size={14} /></button>
+                                <button type="button" disabled={agendaIdx === (item.agenda || []).length - 1} onClick={() => handleMoveDailyAgendaItem(scheduleIdx, agendaIdx, 'down')} className="text-slate-300 hover:text-emerald-600 disabled:opacity-0 transition-all"><ChevronDown size={14} /></button>
+                              </div>
+                              <div className="w-32">
+                                <input type="text" placeholder="Time" value={agendaItem.time} onChange={e => {
+                                  const updated = [...(formEvent.schedule || [])];
+                                  updated[scheduleIdx].agenda[agendaIdx].time = e.target.value;
+                                  setFormEvent({ ...formEvent, schedule: updated });
+                                }} className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl outline-none text-xs font-bold" />
+                              </div>
+                              <div className="flex-grow">
+                                <input type="text" placeholder="Activity Title" value={agendaItem.activity} onChange={e => {
+                                  const updated = [...(formEvent.schedule || [])];
+                                  updated[scheduleIdx].agenda[agendaIdx].activity = e.target.value;
+                                  setFormEvent({ ...formEvent, schedule: updated });
+                                }} className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl outline-none text-xs font-medium" />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {(item.agenda || []).length > 1 && (
+                                  <button type="button" onClick={() => handleRemoveDailyAgendaItem(scheduleIdx, agendaIdx)} className="p-2 text-rose-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
+                                    <Trash size={14} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex-grow">
-                              <input required type="text" placeholder="Activity Title" value={agendaItem.activity} onChange={e => {
-                                const updated = [...(formEvent.schedule || [])];
-                                updated[scheduleIdx].agenda[agendaIdx].activity = e.target.value;
-                                setFormEvent({ ...formEvent, schedule: updated });
-                              }} className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl outline-none text-xs font-medium" />
-                            </div>
-                            {(item.agenda || []).length > 1 && (
-                              <button type="button" onClick={() => handleRemoveDailyAgendaItem(scheduleIdx, agendaIdx)} className="p-2 text-rose-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
-                                <Trash size={14} />
-                              </button>
-                            )}
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1904,7 +2765,7 @@ const EventsManagement = () => {
                     <div className="space-y-6 flex-grow">
                       <div>
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Speaker Name</label>
-                        <input required type="text" placeholder="Full Name" value={speaker.name} onChange={e => {
+                        <input type="text" placeholder="Full Name" value={speaker.name} onChange={e => {
                           const updated = [...(formEvent.speakers || [])];
                           updated[idx].name = e.target.value;
                           setFormEvent({ ...formEvent, speakers: updated });
@@ -1912,7 +2773,7 @@ const EventsManagement = () => {
                       </div>
                       <div>
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Professional Role</label>
-                        <input required type="text" placeholder="e.g. CEO, Radisson Blu" value={speaker.role} onChange={e => {
+                        <input type="text" placeholder="e.g. CEO, Radisson Blu" value={speaker.role} onChange={e => {
                           const updated = [...(formEvent.speakers || [])];
                           updated[idx].role = e.target.value;
                           setFormEvent({ ...formEvent, speakers: updated });
@@ -1924,10 +2785,21 @@ const EventsManagement = () => {
               </div>
             </div>
 
-            <div className="pt-12">
-              <button type="submit" className="w-full bg-emerald-600 text-white py-6 rounded-3xl font-black uppercase tracking-[0.2em] text-sm shadow-2xl shadow-emerald-900/20 hover:bg-slate-900 transition-all flex items-center justify-center">
+            <div className="pt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <button
+                type="button"
+                onClick={(e) => handleSaveEvent(e as any, 'Draft')}
+                className="w-full bg-slate-100 text-slate-600 py-6 rounded-3xl font-black uppercase tracking-[0.2em] text-sm hover:bg-slate-200 transition-all flex items-center justify-center border border-slate-200"
+              >
+                <Save size={20} className="mr-4" />
+                Save as Draft
+              </button>
+              <button
+                type="submit"
+                className="w-full bg-emerald-600 text-white py-6 rounded-3xl font-black uppercase tracking-[0.2em] text-sm shadow-2xl shadow-emerald-900/20 hover:bg-slate-900 transition-all flex items-center justify-center"
+              >
                 <Send size={20} className="mr-4" />
-                {editingEventId ? 'Update Event' : 'Publish Live Event'}
+                {editingEventId ? (formEvent.status === 'Draft' ? 'Submit for Review' : 'Update Event') : (isAdmin ? 'Publish Live Event' : 'Submit for Review')}
               </button>
             </div>
           </form>
@@ -1975,7 +2847,9 @@ const EventsManagement = () => {
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex flex-col gap-1.5">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-center ${isDraft ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-center ${event.status === 'Approved' || event.status === 'Published' ? 'bg-emerald-100 text-emerald-700' :
+                            event.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
+                              'bg-rose-100 text-rose-700'
                             }`}>
                             {event.status}
                           </span>
@@ -2005,7 +2879,37 @@ const EventsManagement = () => {
                             <Edit3 size={16} />
                           </button>
 
-                          {isDraft && (
+                          {isAdmin && event.status === 'Pending' && (
+                            <button
+                              onClick={() => handleStatusChange(event.id, 'Approved')}
+                              title="Approve Event"
+                              className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                            >
+                              <CheckCircle size={16} />
+                            </button>
+                          )}
+
+                          {isAdmin && event.status === 'Approved' && (
+                            <button
+                              onClick={() => handleStatusChange(event.id, 'Suspended')}
+                              title="Suspend Event"
+                              className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                            >
+                              <AlertTriangle size={16} />
+                            </button>
+                          )}
+
+                          {isAdmin && event.status === 'Pending' && (
+                            <button
+                              onClick={() => handleStatusChange(event.id, 'Declined')}
+                              title="Decline Event"
+                              className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                            >
+                              <XCircle size={16} />
+                            </button>
+                          )}
+
+                          {(isDraft || event.status === 'Published') && (
                             <button
                               onClick={() => handlePublish(event.id)}
                               title="Publish Now"
@@ -2045,6 +2949,14 @@ const EventsManagement = () => {
           </div>
         </div>
       )}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+      />
     </div>
   );
 };
@@ -2073,6 +2985,23 @@ const NewsManagement = () => {
   };
 
   const [formNews, setFormNews] = useState(initialForm);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info' | 'success';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    variant: 'warning'
+  });
+
+  const askConfirm = (title: string, message: string, onConfirm: () => void, variant: 'danger' | 'warning' | 'info' | 'success' = 'warning') => {
+    setConfirmModal({ isOpen: true, title, message, onConfirm, variant });
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -2132,28 +3061,33 @@ const NewsManagement = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Delete this article?')) {
-      try {
-        const { error } = await supabase
-          .from('news')
-          .delete()
-          .eq('id', id);
+    askConfirm(
+      'Delete News Article?',
+      `Are you sure you want to delete "${news.find(n => n.id === id)?.title || 'this article'}"? This will remove it from the website permanently.`,
+      async () => {
+        try {
+          const { error } = await supabase
+            .from('news')
+            .delete()
+            .eq('id', id);
 
-        if (error) throw error;
+          if (error) throw error;
 
-        // Log activity
-        await supabase.from('activities').insert({
-          type: 'news',
-          text: `Deleted news article: "${news.find(n => n.id === id)?.title || 'an article'}"`
-        });
+          // Log activity
+          await supabase.from('activities').insert({
+            type: 'news',
+            text: `Deleted news article: "${news.find(n => n.id === id)?.title || 'an article'}"`
+          });
 
-        refreshData();
-        showNotification('News article deleted.', 'success');
-      } catch (err: any) {
-        console.error('Error deleting news:', err.message);
-        showNotification('Error deleting news.', 'error');
-      }
-    }
+          refreshData();
+          showNotification('News article deleted.', 'success');
+        } catch (err: any) {
+          console.error('Error deleting news:', err.message);
+          showNotification('Error deleting news.', 'error');
+        }
+      },
+      'danger'
+    );
   };
 
   const openEdit = (article: any) => {
@@ -2277,6 +3211,14 @@ const NewsManagement = () => {
           </div>
         </div>
       )}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+      />
     </div>
   );
 };
@@ -2441,86 +3383,113 @@ const ActivityLogs = () => {
 };
 
 const ProfileEdit = ({ user }: { user: any }) => {
-  const { hotels, loading, refreshData } = useAppContext();
-  const [formData, setFormData] = useState<any>(null);
-  const [galleryImages, setGalleryImages] = useState<(string | File)[]>([]);
-  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { hotels, loading, refreshData, showNotification } = useAppContext();
   const [saving, setSaving] = useState(false);
+  const [hotelId, setHotelId] = useState<string | null>(null);
+  const [status, setStatus] = useState('pending');
+
+  // Section A: Identity
+  const [hotelName, setHotelName] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
+  const [email, setEmail] = useState('');
+  const [contact, setContact] = useState('');
+  const [website, setWebsite] = useState('');
+
+  // Section B: Ownership
+  const [owner, setOwner] = useState('');
+  const [manager, setManager] = useState('');
+  const [regNumber, setRegNumber] = useState('');
+  const [year, setYear] = useState('');
+  const [employees, setEmployees] = useState('');
+
+  // Section C: Facilities
+  const [rooms, setRooms] = useState('');
+  const [stars, setStars] = useState(4);
+  const [roomTypes, setRoomTypes] = useState<string[]>([]);
+  const [facilities, setFacilities] = useState<string[]>([]);
+  const [otherAmenities, setOtherAmenities] = useState('');
+
+  // Section D: Compliance
+  const [tin, setTin] = useState('');
+  const [ntbLicense, setNtbLicense] = useState('');
+  const [complianceRemarks, setComplianceRemarks] = useState('');
+  const [newDocuments, setNewDocuments] = useState<{ [key: string]: File }>({});
+  const [existingDocuments, setExistingDocuments] = useState<{ [key: string]: any }>({});
+
+  // Section E: Commitment
+  const [signeeName, setSigneeName] = useState('');
+  const [signeePosition, setSigneePosition] = useState('');
+  const [signeeDate, setSigneeDate] = useState('');
+
+  // Section F: Gallery
+  const [galleryImages, setGalleryImages] = useState<File[]>([]);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [existingGallery, setExistingGallery] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user || hotels.length === 0) return;
 
-    // Try to find by ID first, then fallback to email for older mock accounts
-    let hotel = hotels.find(h => h.id === user.id);
+    let hotel = hotels.find(h => h.user_id === user.id);
     if (!hotel) {
       hotel = hotels.find(h => h.email === user.email);
     }
 
     if (hotel) {
-      setFormData({
-        ...hotel,
-        hotelName: hotel.hotel_name,
-        year: hotel.year_established?.toString()
-      });
-      setGalleryImages(hotel.gallery || []);
+      setHotelId(hotel.id);
+      setHotelName(hotel.hotel_name || '');
+      setAddress(hotel.address || '');
+      setCity(hotel.city || '');
+      setDistrict(hotel.district || '');
+      setEmail(hotel.email || '');
+      setContact(hotel.contact || '');
+      setWebsite(hotel.website || '');
+      setOwner(hotel.owner || '');
+      setManager(hotel.manager || '');
+      setRegNumber(hotel.reg_number || '');
+      setYear(hotel.year_established?.toString() || '');
+      setEmployees(hotel.employees?.toString() || '');
+      setRooms(hotel.rooms?.toString() || '');
+      setStars(hotel.stars || 4);
+      setRoomTypes(hotel.room_types || []);
+      setFacilities(hotel.facilities || []);
+      setOtherAmenities(hotel.other_amenities || '');
+      setTin(hotel.tin || '');
+      setNtbLicense(hotel.ntb_license || '');
+      setComplianceRemarks(hotel.compliance_remarks || '');
+      setExistingDocuments(hotel.documents || {});
+      setSigneeName(hotel.signee_name || '');
+      setSigneePosition(hotel.signee_position || '');
+      if (hotel.signee_date) setSigneeDate(new Date(hotel.signee_date).toISOString().split('T')[0]);
+      setExistingGallery(hotel.gallery || []);
       setGalleryPreviews(hotel.gallery || []);
+      setStatus(hotel.status || 'pending');
     }
   }, [user, hotels]);
 
+  const toggleFacility = (f: string) => {
+    setFacilities(prev => prev.includes(f) ? prev.filter(item => item !== f) : [...prev, f]);
+  };
 
+  const toggleRoomType = (type: string) => {
+    setRoomTypes(prev => prev.includes(type) ? prev.filter(item => item !== type) : [...prev, type]);
+  };
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      // 1. Process Gallery Images (Upload only new Files)
-      const galleryUrls = await Promise.all(
-        galleryImages.map(async (item) => {
-          if (typeof item === 'string') return item; // Already a URL
-          const file = item as File;
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-          const filePath = `gallery/${fileName}`;
-
-          const { data, error } = await supabase.storage
-            .from('hotel-gallery')
-            .upload(filePath, file);
-
-          if (error) throw error;
-          const { data: { publicUrl } } = supabase.storage.from('hotel-gallery').getPublicUrl(filePath);
-          return publicUrl;
-        })
-      );
-
-      const payload = {
-        ...formData,
-        hotel_name: formData.hotelName,
-        year_established: parseInt(formData.year) || 2024,
-        gallery: galleryUrls
-      };
-
-      const { error } = await supabase
-        .from('hotels')
-        .update(payload)
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      setSaving(false);
-      refreshData();
-      alert('Membership details updated successfully! Your public directory listing is now synchronized.');
-    } catch (err: any) {
-      console.error('Error saving profile:', err.message);
-      alert('Error updating profile information.');
-      setSaving(false);
-    }
+  const handleDocUpload = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNewDocuments(prev => ({ ...prev, [key]: file }));
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    const currentCount = galleryImages.length;
+
+    const currentCount = galleryImages.length + existingGallery.length;
     const remainingSlots = 10 - currentCount;
+
     if (remainingSlots <= 0) return;
 
     const newFiles = Array.from(files).slice(0, remainingSlots) as File[];
@@ -2536,284 +3505,417 @@ const ProfileEdit = ({ user }: { user: any }) => {
   };
 
   const removeImage = (index: number) => {
-    setGalleryImages(prev => prev.filter((_, i) => i !== index));
-    setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const toggleFacility = (facility: string) => {
-    const current = formData.facilities || [];
-    if (current.includes(facility)) {
-      setFormData({ ...formData, facilities: current.filter((f: string) => f !== facility) });
+    if (index < existingGallery.length) {
+      setExistingGallery(prev => prev.filter((_, i) => i !== index));
+      setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
     } else {
-      setFormData({ ...formData, facilities: [...current, facility] });
+      const relativeIdx = index - existingGallery.length;
+      setGalleryImages(prev => prev.filter((_, i) => i !== relativeIdx));
+      setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-20 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm African-accents">
-        <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-6"></div>
-        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Synchronizing Secure Data...</p>
-      </div>
-    );
-  }
+  const handleSave = async () => {
+    if (!hotelId) return;
+    setSaving(true);
 
-  if (!formData) {
-    return (
-      <div className="max-w-3xl mx-auto py-12 African-accents">
-        <div className="bg-white rounded-[3rem] p-10 md:p-16 border border-slate-100 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-10 opacity-5 -rotate-12 group-hover:rotate-0 transition-transform duration-700">
-            <FileSignature size={240} />
-          </div>
+    try {
+      const uploadedGalleryUrls = await Promise.all(
+        galleryImages.map(async (file) => {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${hotelId}-${Math.random()}.${fileExt}`;
+          const filePath = `gallery/${fileName}`;
+          const { error } = await supabase.storage.from('hotel-gallery').upload(filePath, file);
+          if (error) throw error;
+          return supabase.storage.from('hotel-gallery').getPublicUrl(filePath).data.publicUrl;
+        })
+      );
 
-          <div className="relative z-10 text-center space-y-8">
-            <div className="w-24 h-24 bg-amber-50 text-amber-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-xl shadow-amber-900/10 animate-bounce-slow">
-              <AlertCircle size={48} />
-            </div>
+      const uploadedDocumentUrls: { [key: string]: string } = {};
+      for (const [key, file] of Object.entries(newDocuments)) {
+        const fileExt = (file as File).name.split('.').pop();
+        const fileName = `${key}-${hotelId}-${Math.random()}.${fileExt}`;
+        const filePath = `documents/${fileName}`;
+        const { error } = await supabase.storage.from('hotel-documents').upload(filePath, file as File);
+        if (error) throw error;
+        uploadedDocumentUrls[key] = supabase.storage.from('hotel-documents').getPublicUrl(filePath).data.publicUrl;
+      }
 
-            <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-black text-slate-900 uppercase tracking-tighter">Registration Required</h2>
-              <p className="text-slate-500 font-medium max-w-md mx-auto leading-relaxed">
-                We couldn't find a hotel profile linked to your account. To access your member dashboard and public directory listing, please complete your official registration.
-              </p>
-            </div>
+      const payload = {
+        hotel_name: hotelName,
+        address, city, district, email, contact, website,
+        owner, manager, reg_number: regNumber,
+        year_established: year ? parseInt(year) : null,
+        employees: employees ? parseInt(employees) : null,
+        rooms: rooms ? parseInt(rooms) : null,
+        stars, room_types: roomTypes, facilities,
+        other_amenities: otherAmenities, tin, ntb_license: ntbLicense,
+        compliance_remarks: complianceRemarks,
+        documents: { ...existingDocuments, ...uploadedDocumentUrls },
+        signee_name: signeeName, signee_position: signeePosition, signee_date: signeeDate,
+        gallery: [...existingGallery, ...uploadedGalleryUrls]
+      };
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <Link
-                to="/register"
-                className="w-full sm:w-auto bg-slate-900 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-slate-900/20 hover:bg-emerald-600 transition-all flex items-center justify-center group"
-              >
-                <FileSignature size={18} className="mr-3 group-hover:scale-110 transition-transform" />
-                Submit Registration
-              </Link>
-              <button
-                onClick={() => refreshData()}
-                className="w-full sm:w-auto bg-slate-50 text-slate-500 px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-slate-100 transition-all flex items-center justify-center"
-              >
-                <History size={18} className="mr-3" />
-                Check Status
-              </button>
-            </div>
+      // Ensure status is 'pending' if completeness is missing
+      const { complete } = isProfileComplete(payload);
+      const finalStatus = complete ? status : 'pending';
 
-            <div className="pt-8 border-t border-slate-50 flex items-center justify-center gap-8 text-[9px] font-black text-slate-300 uppercase tracking-widest">
-              <span className="flex items-center gap-2"><Check size={12} className="text-emerald-500" /> Secure SSL</span>
-              <span className="flex items-center gap-2"><Check size={12} className="text-emerald-500" /> Admin Verified</span>
-            </div>
-          </div>
+      const { error } = await supabase.from('hotels').update({ ...payload, status: finalStatus }).eq('id', hotelId);
+
+      if (!error && !complete && status === 'approved') {
+        showNotification('Profile updated, but stays PENDING due to missing fields.', 'warning');
+      }
+      if (error) throw error;
+
+      await supabase.from('activities').insert({
+        type: 'update',
+        text: `Member updated their property profile for "${hotelName}".`,
+        user_id: user.id
+      });
+
+      showNotification('Profile updated successfully!', 'success');
+      setGalleryImages([]);
+      setNewDocuments({});
+      await refreshData();
+    } catch (err: any) {
+      console.error('Error saving profile:', err.message);
+      showNotification('Error updating profile: ' + err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return (
+    <div className="p-20 text-center bg-white rounded-[3rem] border border-slate-100 animate-pulse">
+      <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-6"></div>
+      <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Processing...</p>
+    </div>
+  );
+
+  if (!hotelId) return (
+    <div className="max-w-3xl mx-auto py-12 African-accents">
+      <div className="bg-white rounded-[3rem] p-10 md:p-16 border border-slate-100 shadow-2xl text-center space-y-8">
+        <div className="w-24 h-24 bg-amber-50 text-amber-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-xl shadow-amber-900/10">
+          <AlertCircle size={48} />
         </div>
+        <div className="space-y-3">
+          <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Registration Required</h2>
+          <p className="text-slate-500 font-medium max-w-md mx-auto leading-relaxed">Please complete your official registration to access your profile.</p>
+        </div>
+        <Link to="/register" className="inline-flex bg-slate-900 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-emerald-600 transition-all">Submit Registration</Link>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div className="max-w-5xl space-y-12 pb-24 african-accents">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 md:mb-12">
+    <div className="max-w-5xl mx-auto space-y-12 pb-24 african-accents">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-4xl font-black text-slate-900 uppercase tracking-tighter">Directory Listing</h1>
-            <p className="text-slate-500 text-sm md:text-base font-medium">Manage how your hotel appears publically.</p>
+            <h1 className="text-2xl md:text-4xl font-black text-slate-900 uppercase tracking-tighter">My Membership Profile</h1>
+            <p className="text-slate-500 font-medium italic">Manage your official association details.</p>
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full md:w-auto bg-emerald-600 text-white px-6 md:px-10 py-3 md:py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] md:text-xs shadow-xl shadow-emerald-900/10 hover:bg-slate-900 transition-all disabled:opacity-50 flex items-center justify-center"
-          >
-            {saving ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-3"></div> : <CheckCircle size={16} className="md:mr-3 mr-2" />}
-            {saving ? 'Saving...' : 'Update Listing'}
-          </button>
+          <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+            status === 'rejected' ? 'bg-rose-100 text-rose-700 border-rose-200' :
+              status === 'suspended' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                'bg-slate-100 text-slate-700 border-slate-200'
+            }`}>
+            {status}
+          </span>
         </div>
+        <button onClick={handleSave} disabled={saving} className="bg-emerald-600 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl hover:bg-slate-900 transition-all disabled:opacity-50 flex items-center justify-center">
+          {saving ? <Loader2 size={16} className="animate-spin mr-3" /> : <CheckCircle size={16} className="mr-3" />}
+          {saving ? 'Updating...' : 'Save Changes'}
+        </button>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Left Column: Forms */}
-          <div className="lg:col-span-2 space-y-10">
+      <div className="space-y-10">
+        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+          <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><Hotel className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION A: Hotel Identity</h3></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Hotel Name *</label><input required type="text" value={hotelName} onChange={(e) => setHotelName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Address *</label><input required type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">City/Town *</label><input required type="text" value={city} onChange={(e) => setCity(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">District *</label><input required type="text" value={district} onChange={(e) => setDistrict(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">Official Contact Number *</label><input required type="tel" value={contact} onChange={(e) => setContact(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Website (If Any)</label><div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="url" placeholder="www.yourhotel.sl" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div></div>
+          </div>
+        </section>
 
-            {/* Section 1: Basic Identity */}
-            <section className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 border border-slate-100 shadow-sm space-y-6 md:space-y-8">
-              <h3 className="text-lg md:text-xl font-black text-slate-900 uppercase tracking-widest border-b border-slate-50 pb-4 md:pb-6 flex items-center">
-                <Info className="mr-3 md:mr-4 text-emerald-600" size={20} md:size={24} /> Primary Identity
-              </h3>
+        {status === 'approved' || status === 'pending' ? (
+          <>
+            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+              <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><ClipboardList className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION B: Ownership & Management</h3></div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Professional Hotel Name</label>
-                  <input type="text" value={formData.hotelName} onChange={e => setFormData({ ...formData, hotelName: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold text-slate-700" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Street Address</label>
-                  <input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-medium text-slate-700" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">City / Town</label>
-                  <input type="text" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-medium text-slate-700" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">District</label>
-                  <input type="text" value={formData.district} onChange={e => setFormData({ ...formData, district: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-medium text-slate-700" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Property Classification</label>
-                  <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold text-slate-700 appearance-none">
-                    {['Luxury', 'Boutique', 'Resort', 'Eco-Lodge', 'Mid-range', 'Guest House', 'Business'].map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
+                <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Owner/Proprietor Name *</label><input required type="text" value={owner} onChange={(e) => setOwner(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+                <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Managing Director / GM *</label><input required type="text" value={manager} onChange={(e) => setManager(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+                <div><label className="block text-sm font-bold text-slate-600 mb-2">Business Registration Number *</label><input required type="text" value={regNumber} onChange={(e) => setRegNumber(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+                <div><label className="block text-sm font-bold text-slate-600 mb-2">Year Established *</label><input required type="number" value={year} onChange={(e) => setYear(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+                <div><label className="block text-sm font-bold text-slate-600 mb-2">Total Number of Employees *</label><input required type="number" value={employees} onChange={(e) => setEmployees(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
               </div>
             </section>
 
-            {/* Section 2: Operational Data */}
-            <section className="bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 border border-slate-100 shadow-sm space-y-6 md:space-y-8">
-              <h3 className="text-lg md:text-xl font-black text-slate-900 uppercase tracking-widest border-b border-slate-50 pb-4 md:pb-6 flex items-center">
-                <BarChart3 className="mr-3 md:mr-4 text-emerald-600" size={20} md:size={24} /> Operational Metrics
-              </h3>
+            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+              <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><Star className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION C: Facilities & Classification</h3></div>
+              <div className="space-y-8">
+                <div><label className="block text-sm font-bold text-slate-600 mb-4">Hotel Classification (★ rating) *</label><div className="flex gap-4">{[1, 2, 3, 4, 5].map(s => (<label key={s} className="flex items-center space-x-2 cursor-pointer"><input type="radio" checked={stars === s} onChange={() => setStars(s)} className="w-5 h-5 accent-amber-500" /><span>{s} ★</span></label>))}</div></div>
+                <div className="w-1/3"><label className="block text-sm font-bold text-slate-600 mb-2">Total Guest Rooms *</label><input required type="number" value={rooms} onChange={(e) => setRooms(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+                <div><label className="block text-sm font-bold text-slate-600 mb-4">Room Types Available</label><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{['Single', 'Double', 'Suite', 'Deluxe'].map(t => (<label key={t} className="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl cursor-pointer"><input type="checkbox" checked={roomTypes.includes(t)} onChange={() => toggleRoomType(t)} className="w-5 h-5 accent-emerald-600" /><span>{t}</span></label>))}</div></div>
+                <div><label className="block text-sm font-bold text-slate-600 mb-4">In-House Facilities</label><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{['Restaurant', 'Bar', 'Pool', 'Conference Room', 'Spa', 'Wi-Fi', 'Gym', 'Laundry', 'Beachfront', 'Airport Shuttle', 'Security'].map(f => (<label key={f} className="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl cursor-pointer"><input type="checkbox" checked={facilities.includes(f)} onChange={() => toggleFacility(f)} className="w-5 h-5 accent-emerald-600" /><span>{f}</span></label>))}</div></div>
+                <div><label className="block text-sm font-bold text-slate-600 mb-2">Other Amenities</label><textarea placeholder="List other features..." value={otherAmenities} onChange={(e) => setOtherAmenities(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 h-32" /></div>
+              </div>
+            </section>
+
+            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+              <div className="flex items-center mb-4 border-b border-slate-100 pb-4"><Scale className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION D: Compliance & Documentation</h3></div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Establishment Year</label>
-                  <input type="number" value={formData.year} onChange={e => setFormData({ ...formData, year: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold text-slate-700" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Total Staff Represented</label>
-                  <input type="text" value={formData.employees} onChange={e => setFormData({ ...formData, employees: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold text-slate-700" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Total Guest Rooms</label>
-                  <input type="number" value={formData.rooms} onChange={e => setFormData({ ...formData, rooms: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold text-slate-700" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Official Star Rating</label>
-                  <div className="flex gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-100">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, stars: star })}
-                        className={`flex-grow py-2 rounded-xl transition-all ${formData.stars >= star ? 'bg-amber-100 text-amber-600 shadow-sm' : 'text-slate-300 hover:text-slate-400'}`}
-                      >
-                        <Star size={18} fill={formData.stars >= star ? 'currentColor' : 'none'} className="mx-auto" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <div><label className="block text-sm font-bold text-slate-600 mb-2">TIN Number *</label><input required type="text" value={tin} onChange={(e) => setTin(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+                <div><label className="block text-sm font-bold text-slate-600 mb-2">NTB License Number *</label><input required type="text" value={ntbLicense} onChange={(e) => setNtbLicense(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+                <div className="space-y-4"><label className="block text-sm font-bold text-slate-600">Cert of Incorporation</label><div className="flex items-center space-x-4"><button type="button" onClick={() => document.getElementById('certIncorporation')?.click()} className="flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 font-bold text-sm"><UploadCloud size={16} /><span>{newDocuments.certIncorporation || existingDocuments.certIncorporation ? 'Attached' : 'Upload'}</span></button><input type="file" id="certIncorporation" className="hidden" onChange={(e) => handleDocUpload(e, 'certIncorporation')} /></div></div>
+                <div className="space-y-4"><label className="block text-sm font-bold text-slate-600">Biz Registration Cert</label><div className="flex items-center space-x-4"><button type="button" onClick={() => document.getElementById('bizRegCert')?.click()} className="flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 font-bold text-sm"><UploadCloud size={16} /><span>{newDocuments.bizRegCert || existingDocuments.bizRegCert ? 'Attached' : 'Upload'}</span></button><input type="file" id="bizRegCert" className="hidden" onChange={(e) => handleDocUpload(e, 'bizRegCert')} /></div></div>
+                <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Compliance Remarks</label><textarea value={complianceRemarks} onChange={(e) => setComplianceRemarks(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none h-24 bg-slate-50" /></div>
               </div>
             </section>
 
-            {/* Section 3: Facilities & Services */}
-            <section className="bg-white rounded-[3rem] p-10 md:p-12 border border-slate-100 shadow-sm space-y-8">
-              <h3 className="text-xl font-black text-slate-900 uppercase tracking-widest border-b border-slate-50 pb-6 flex items-center">
-                <Award className="mr-4 text-emerald-600" size={24} /> Facilities & Services
-              </h3>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 md:mb-6">Available Amenities (Check all that apply)</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-                  {['Restaurant', 'Bar', 'Pool', 'Conference Room', 'Spa', 'Wi-Fi', 'Gym', 'Laundry', 'Beachfront', 'Airport Shuttle', 'Security'].map((f) => {
-                    const isChecked = (formData.facilities || []).includes(f);
-                    return (
-                      <button
-                        key={f}
-                        type="button"
-                        onClick={() => toggleFacility(f)}
-                        className={`flex items-center p-4 rounded-2xl border text-sm font-bold transition-all ${isChecked ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm' : 'bg-slate-50 border-slate-50 text-slate-500 hover:border-slate-200'}`}
-                      >
-                        <div className={`w-5 h-5 rounded-lg mr-3 flex items-center justify-center transition-colors ${isChecked ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200'}`}>
-                          {isChecked && <CheckCircle size={12} />}
-                        </div>
-                        {f}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Detailed Amenities & Remarks</label>
-                <textarea rows={4} value={formData.amenities} onChange={e => setFormData({ ...formData, amenities: e.target.value })} placeholder="Describe additional services, unique features, or highlights..." className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-medium text-slate-700 resize-none" />
+            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+              <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><FileSignature className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION E: Commitment</h3></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div><label className="block text-sm font-bold text-slate-600 mb-2">Signee Name *</label><input required type="text" value={signeeName} onChange={(e) => setSigneeName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+                <div><label className="block text-sm font-bold text-slate-600 mb-2">Position *</label><input required type="text" value={signeePosition} onChange={(e) => setSigneePosition(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+                <div><label className="block text-sm font-bold text-slate-600 mb-2">Date</label><input type="date" value={signeeDate} onChange={(e) => setSigneeDate(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
               </div>
             </section>
 
-            {/* Section 4: Public Gallery */}
-            <section className="bg-white rounded-[3rem] p-10 md:p-12 border border-slate-100 shadow-sm space-y-8">
-              <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-50 pb-6 gap-4">
-                <h3 className="text-xl font-black text-slate-900 uppercase tracking-widest flex items-center">
-                  <UploadCloud className="mr-4 text-emerald-600" size={24} /> Public Showcase
-                </h3>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-4 py-1.5 rounded-full">{galleryImages.length} / 10 Active</span>
-              </div>
-              <p className="text-slate-500 font-medium italic">High-resolution images significantly improve directory engagement and SLAH visibility.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+              <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><ImageIcon className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION F: Media Gallery</h3></div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {galleryPreviews.map((img, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-3xl overflow-hidden group border border-slate-100 shadow-md">
-                    <img src={img} className="w-full h-full object-cover" alt="Gallery" />
-                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <button onClick={() => removeImage(idx)} className="p-3 bg-rose-500 text-white rounded-2xl shadow-xl transform scale-75 group-hover:scale-100 transition-all hover:bg-rose-600">
-                        <Trash size={20} />
-                      </button>
-                    </div>
+                  <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden group border border-slate-100">
+                    <img src={img} alt="Gallery" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => removeImage(idx)} className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
                   </div>
                 ))}
-                {galleryImages.length < 10 && (
-                  <button onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-[2rem] border-4 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-300 hover:text-emerald-500 hover:border-emerald-100 hover:bg-emerald-50 transition-all group">
-                    <Plus size={32} className="mb-2 group-hover:scale-110 transition-transform" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Add Photo</span>
+                {galleryPreviews.length < 10 && (
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-500 transition-all">
+                    <Plus size={24} className="mb-2" /><span className="text-[10px] font-bold uppercase">Add Photo</span>
                   </button>
                 )}
               </div>
-              <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" multiple className="hidden" />
+              <input type="file" ref={fileInputRef} onChange={handleImageUpload} multiple className="hidden" />
             </section>
-          </div>
-
-          {/* Right Column: Sticky Sidebar Info */}
-          <div className="space-y-10">
-
-            {/* Public Contact Card */}
-            <div className="bg-slate-900 text-white rounded-[3.5rem] p-10 shadow-2xl sticky top-32">
-              <h3 className="text-xs font-black text-emerald-400 uppercase tracking-[0.3em] mb-10 flex items-center">
-                <Globe className="mr-3" size={16} /> Public Contact Points
-              </h3>
-              <div className="space-y-8">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">Inquiry Email</label>
-                  <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">Front Desk Phone</label>
-                  <input type="tel" value={formData.contact} onChange={e => setFormData({ ...formData, contact: e.target.value })} className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">Official Website</label>
-                  <input type="text" value={formData.website} onChange={e => setFormData({ ...formData, website: e.target.value })} placeholder="www.yourhotel.sl" className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" />
-                </div>
-              </div>
-
-              <div className="mt-12 pt-12 border-t border-white/10 space-y-8">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 flex items-center">
-                    <Briefcase className="mr-2 text-emerald-400" size={12} /> Management Details
-                  </label>
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase mb-2">Owner / Proprietor</label>
-                      <input type="text" value={formData.owner} onChange={e => setFormData({ ...formData, owner: e.target.value })} className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium" />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase mb-2">Managing Director / GM</label>
-                      <input type="text" value={formData.manager} onChange={e => setFormData({ ...formData, manager: e.target.value })} className="w-full px-5 py-3 bg-white/5 border border-white/10 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-12 bg-emerald-600/10 border border-emerald-500/20 rounded-3xl p-6 flex items-start gap-4">
-                <Info className="text-emerald-400 mt-1" size={20} />
-                <p className="text-[10px] font-bold text-emerald-100/70 leading-relaxed uppercase tracking-widest">
-                  Changes made here update the public SLAH directory in real-time. Please ensure all data is accurate to maintain SLAH standard compliance.
-                </p>
-              </div>
+          </>
+        ) : (
+          <div className="bg-emerald-900 rounded-[3rem] p-12 md:p-20 text-center shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-10 opacity-10">
+              <ShieldCheck size={180} className="text-white" />
             </div>
-
+            <div className="relative z-10">
+              <h3 className="text-3xl font-black text-white uppercase tracking-tighter mb-6">
+                {status === 'pending' ? 'Membership Approval Required' : 'Access Restricted'}
+              </h3>
+              <p className="text-emerald-100/70 max-w-2xl mx-auto mb-10 text-lg leading-relaxed font-medium">
+                {status === 'pending'
+                  ? 'Your application is currently under review. Sections B through F will be unlocked once your membership is approved by the SLAH Secretariat.'
+                  : `Your current membership status is "${status}". Access to full property details and gallery management is restricted. Please contact the Secretariat for more information.`}
+              </p>
+              <div className={`w-20 h-1.5 mx-auto rounded-full ${status === 'pending' ? 'bg-amber-500' : 'bg-rose-500'}`}></div>
+            </div>
           </div>
-        </div>
+        )}
+
+        <button onClick={handleSave} disabled={saving} className="w-full bg-emerald-700 text-white py-6 rounded-3xl font-black text-xl shadow-2xl hover:bg-emerald-800 transition-all flex items-center justify-center disabled:opacity-50">
+          {saving ? <Loader2 size={24} className="animate-spin mr-3" /> : <FileCheck size={24} className="mr-3" />}
+          {saving ? 'Updating...' : 'Update Registration Profile'}
+        </button>
       </div>
     </div>
   );
 };
 
-const SettingsView = ({ user }: { user: any }) => {
+
+function MemberOverview({ user }: { user: any }) {
+  const { userHotel, userHotelLoading, activities } = useAppContext();
+  const navigate = useNavigate();
+
+  if (userHotelLoading) return (
+    <div className="p-20 text-center animate-pulse">
+      <Loader2 className="h-12 w-12 text-emerald-600 animate-spin mx-auto mb-4" />
+      <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Loading Overview...</p>
+    </div>
+  );
+
+  const { complete, missing } = isProfileComplete(userHotel);
+  const status = userHotel?.status || 'unregistered';
+
+  const statusConfig: { [key: string]: { icon: any, color: string, bg: string, text: string, sub: string } } = {
+    approved: { icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50', text: 'Official Member', sub: 'Your property is fully active and listed.' },
+    pending: { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', text: 'Under Review', sub: 'The Secretariat is currently vetting your details.' },
+    rejected: { icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50', text: 'Action Required', sub: 'Please contact the Secretariat for details.' },
+    suspended: { icon: AlertTriangle, color: 'text-amber-700', bg: 'bg-amber-100', text: 'Suspended', sub: 'Membership privileges are temporarily paused.' },
+    unregistered: { icon: AlertCircle, color: 'text-slate-400', bg: 'bg-slate-50', text: 'Not Registered', sub: 'Complete the association registration form.' }
+  };
+
+  const currentStatus = statusConfig[status] || statusConfig.unregistered;
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Welcome Header */}
+      <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-100 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full -mr-32 -mt-32 opacity-50"></div>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <h1 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter mb-2">
+              Welcome Back,
+            </h1>
+            <p className="text-emerald-700 text-xl font-bold italic">
+              {userHotel?.hotel_name || user.name || user.email}
+            </p>
+          </div>
+          <Link to="/dashboard/profile" className="group bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center hover:bg-emerald-600 transition-all shadow-xl shadow-slate-900/10">
+            Edit Full Profile <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Status Card */}
+        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 flex flex-col items-center text-center">
+          <div className={`w-20 h-20 ${currentStatus.bg} ${currentStatus.color} rounded-3xl flex items-center justify-center mb-6 shadow-sm`}>
+            <currentStatus.icon size={40} />
+          </div>
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Membership Status</h3>
+          <p className={`text-2xl font-black uppercase tracking-tighter ${currentStatus.color} mb-4`}>{currentStatus.text}</p>
+          <p className="text-slate-500 text-sm font-medium leading-relaxed">{currentStatus.sub}</p>
+
+          {userHotel?.id && (
+            <div className="mt-8 pt-6 border-t border-slate-50 w-full">
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">Property ID</span>
+              <code className="text-[10px] text-slate-400 font-mono bg-slate-50 px-3 py-1 rounded-lg">#{userHotel.id.substring(0, 8)}</code>
+            </div>
+          )}
+        </div>
+
+        {/* Completeness Tracker */}
+        <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-xl font-bold text-slate-800 uppercase tracking-tight">Profile Integrity</h3>
+              <p className="text-slate-400 text-xs font-medium">Mandatory registration requirements</p>
+            </div>
+            <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${complete ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
+              {complete ? 'Complete' : 'Action Required'}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { id: 'A', name: 'Hotel Identity' },
+              { id: 'B', name: 'Ownership & Mgmt' },
+              { id: 'C', name: 'Facilities & Class' },
+              { id: 'D', name: 'Compliance Docs' },
+              { id: 'E', name: 'Association Commitment' },
+              { id: 'F', name: 'Hotel Gallery' }
+            ].map(section => {
+              const sectionMissing = missing.some(m => m.includes(`Section ${section.id}`));
+              // Gallery check is specific in missing array
+              const isMissing = section.id === 'F' ? missing.some(m => m.includes('gallery')) : sectionMissing;
+
+              return (
+                <div key={section.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isMissing ? 'bg-amber-50/50 border-amber-100' : 'bg-slate-50/50 border-slate-100'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${isMissing ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                      {section.id}
+                    </div>
+                    <span className={`text-xs font-bold ${isMissing ? 'text-amber-800' : 'text-slate-600'}`}>{section.name}</span>
+                  </div>
+                  {isMissing ? (
+                    <AlertTriangle size={14} className="text-amber-500" />
+                  ) : (
+                    <CheckCircle2 size={14} className="text-emerald-500" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {!complete && (
+            <div className="mt-6 p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-3">
+              <Info size={18} className="text-amber-600 mt-0.5" />
+              <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
+                Please complete the missing sections to ensure your property remains active on the public directory. Only fully documented members are publicly visible.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Actions & Recent Activity */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="space-y-4">
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] px-2">Quick Navigation</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { name: 'My Profile', icon: Building2, path: '/dashboard/profile', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+              { name: 'Association Events', icon: Calendar, path: '/dashboard/events', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              { name: 'Public Directory', icon: Hotel, path: '/members', color: 'text-amber-600', bg: 'bg-amber-50', external: true },
+              { name: 'Account Settings', icon: Settings, path: '/dashboard/settings', color: 'text-slate-600', bg: 'bg-slate-50' }
+            ].map(action => (
+              <button
+                key={action.name}
+                onClick={() => action.external ? navigate(action.path) : navigate(action.path)}
+                className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all group text-left"
+              >
+                <div className={`w-12 h-12 ${action.bg} ${action.color} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                  <action.icon size={24} />
+                </div>
+                <span className="text-xs font-black text-slate-900 uppercase tracking-tight block">{action.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 flex flex-col">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center italic font-black">!</div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight">Recent Updates</h3>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Association Activity</p>
+            </div>
+          </div>
+
+          <div className="flex-grow space-y-6">
+            {activities.length > 0 ? activities.slice(0, 3).map((act, i) => (
+              <div key={i} className="flex gap-4 group">
+                <div className="flex flex-col items-center">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></div>
+                  {i !== 2 && <div className="w-px flex-grow bg-slate-100 my-1"></div>}
+                </div>
+                <div>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed group-hover:text-slate-900 transition-colors">
+                    {act.text}
+                  </p>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 block">
+                    {new Date(act.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            )) : (
+              <div className="flex items-center justify-center h-full text-slate-400 text-xs italic">
+                No recent activity to show.
+              </div>
+            )}
+          </div>
+
+          <Link to="/dashboard/settings" className="mt-8 text-center text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] hover:text-slate-900 transition-colors">
+            View Association Logs
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsView({ user }: { user: any }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -2843,21 +3945,17 @@ const SettingsView = ({ user }: { user: any }) => {
 
       if (updateError) throw updateError;
 
-      const { user: authUser } = (await supabase.auth.getUser()).data;
+      // Update password_changed flag in profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ password_changed: true })
+        .eq('id', user.id);
 
-      // Ensure password_changed flag is updated in profile
-      if (authUser) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ password_changed: true })
-          .eq('id', authUser.id);
-
-        if (profileError) {
-          console.warn('Profile security flag update failed:', profileError);
-          showNotification('Password updated, but security flag update pending.', 'warning');
-        } else {
-          showNotification('Password updated successfully! Your account is now secure.', 'success');
-        }
+      if (profileError) {
+        console.error('Error updating password_changed flag:', profileError);
+      } else {
+        showNotification('Password updated successfully', 'success');
+        setSuccess('Password updated successfully');
 
         // Optimistically update global state
         setUser({
@@ -2997,10 +4095,10 @@ export default function Dashboard() {
   const isAdmin = user.role === 'admin' || user.role === 'super-admin';
 
   const menuItems = [
-    { name: 'Overview', path: '/dashboard', icon: <LayoutDashboard size={20} />, roles: ['super-admin', 'admin'] },
+    { name: 'Overview', path: '/dashboard', icon: <LayoutDashboard size={20} />, roles: ['super-admin', 'admin', 'member'] },
     { name: 'Applications', path: '/dashboard/applications', icon: <FileText size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Members', path: '/dashboard/members', icon: <Hotel size={20} />, roles: ['super-admin', 'admin'] },
-    { name: 'Events', path: '/dashboard/events', icon: <Calendar size={20} />, roles: ['super-admin', 'admin'] },
+    { name: 'Events', path: '/dashboard/events', icon: <Calendar size={20} />, roles: ['super-admin', 'admin', 'member'] },
     { name: 'News', path: '/dashboard/news', icon: <Newspaper size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Users', path: '/dashboard/users', icon: <Users size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Logs', path: '/dashboard/logs', icon: <History size={20} />, roles: ['super-admin', 'admin'] },
@@ -3010,7 +4108,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex African-accents">
-      <aside className={`hidden lg:flex flex-col ${isCollapsed ? 'w-24' : 'w-80'} bg-slate-900 text-white fixed h-full z-50 transition-all duration-500 ease-in-out`}>
+      <aside className={`hidden lg:flex flex-col ${isCollapsed ? 'w-24' : 'w-72'} bg-slate-900 text-white fixed h-full z-50 transition-all duration-500 ease-in-out`}>
         {/* Collapse Toggle Button */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -3052,7 +4150,7 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      <div className={`flex-grow ${isCollapsed ? 'lg:ml-24' : 'lg:ml-80'} flex flex-col min-h-screen transition-all duration-500 ease-in-out`}>
+      <div className={`flex-grow ${isCollapsed ? 'lg:ml-24' : 'lg:ml-72'} flex flex-col min-h-screen transition-all duration-500 ease-in-out`}>
         <header className="bg-white border-b border-slate-100 sticky top-0 z-40 p-4 md:p-6 flex items-center justify-between shadow-sm African-accents">
           <div className="flex items-center">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 mr-3 md:mr-4 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
@@ -3074,11 +4172,11 @@ export default function Dashboard() {
             <div className="h-8 w-px bg-slate-100 mx-2"></div>
             <div className="flex items-center space-x-3">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-slate-900">{user.name}</p>
-                <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">{user.role}</p>
+                <p className="text-sm font-bold text-slate-900">{user?.name || user?.email}</p>
+                <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">{user?.role || 'User'}</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shadow-sm ring-2 ring-emerald-50">
-                {user.name.charAt(0)}
+                {(user?.name || user?.email || 'U').charAt(0)}
               </div>
             </div>
           </div>
@@ -3112,7 +4210,7 @@ export default function Dashboard() {
                   )}
                 </div>
               ) : (
-                <ProfileEdit user={user} />
+                <MemberOverview user={user} />
               )
             } />
             <Route path="/applications" element={<Applications />} />

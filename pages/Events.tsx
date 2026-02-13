@@ -114,7 +114,8 @@ const Events: React.FC = () => {
       else if (statusFilter === 'past') matchesStatus = e.date < today;
       else if (statusFilter === 'current') matchesStatus = e.date === today;
 
-      return matchesSearch && matchesCategory && matchesStatus;
+      const isApproved = e.status === 'Approved' || e.status === 'Published';
+      return matchesSearch && matchesCategory && matchesStatus && isApproved;
     })
     .sort((a, b) => {
       return sortOrder === 'newest'

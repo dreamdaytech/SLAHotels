@@ -82,13 +82,28 @@ export default function Login() {
     setLoading(true);
     setError('');
 
-    try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: inputEmail,
-        password: inputPassword,
-      });
+    const attemptLogin = async (retryCount = 0): Promise<any> => {
+      try {
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: inputEmail,
+          password: inputPassword,
+        });
 
-      if (authError) throw authError;
+        if (authError) throw authError;
+        return authData;
+      } catch (err: any) {
+        const isAbortError = err.name === 'AbortError' || err.message?.toLowerCase().includes('abort');
+        if (isAbortError && retryCount < 2) {
+          console.warn(`Login request aborted. Retrying... (Attempt ${retryCount + 1})`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return attemptLogin(retryCount + 1);
+        }
+        throw err;
+      }
+    };
+
+    try {
+      const authData = await attemptLogin();
 
       if (authData.user) {
         // Fetch profile to check password_changed flag
@@ -120,7 +135,14 @@ export default function Login() {
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Invalid email or password.');
+
+      // Handle AbortError specifically
+      const isAbortError = err.name === 'AbortError' || err.message?.toLowerCase().includes('abort');
+      if (isAbortError) {
+        setError('The login request was interrupted. This is often caused by browser extensions or security software. Please try again or use an Incognito window.');
+      } else {
+        setError(err.message || 'Invalid email or password.');
+      }
       setLoading(false);
     }
   };
@@ -267,7 +289,16 @@ export default function Login() {
       showNotification('Recovery email sent successfully.', 'success');
     } catch (err: any) {
       console.error('Reset error:', err.message);
-      setError(err.message || 'Failed to send reset email.');
+
+      // Handle AbortError or Permission errors (likely caused by browser extensions like QuillBot)
+      const isAbortError = err.name === 'AbortError' || err.message?.toLowerCase().includes('abort');
+      const isPermissionError = err.message?.toLowerCase().includes('permission error');
+
+      if (isAbortError || isPermissionError) {
+        setError('The request was interrupted. This is often caused by browser extensions (like QuillBot) or security software. Please try again, or use an Incognito/Private window.');
+      } else {
+        setError(err.message || 'Failed to send reset email.');
+      }
     } finally {
       setLoading(false);
     }

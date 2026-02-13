@@ -17,18 +17,23 @@ const Members: React.FC = () => {
   const [isFilterVisible, setIsFilterVisible] = useState(false);
 
   // Normalize data structure for the directory grid
-  const members = useMemo(() => (rawMembers || []).map((m: any) => ({
-    id: m.id,
-    name: m.hotel_name,
-    location: m.city,
-    address: m.address,
-    district: m.district,
-    stars: m.stars,
-    image: (m.gallery && m.gallery.length > 0) ? m.gallery[0] : 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=800',
-    type: 'Hotel', // Property type not explicitly in schema
-    rooms: m.rooms || 0,
-    facilities: m.facilities || []
-  })), [rawMembers]);
+  const members = useMemo(() =>
+    (rawMembers || [])
+      .filter((m: any) => m.status === 'approved')
+      .map((m: any) => ({
+        id: m.id,
+        name: m.hotel_name || 'Unnamed Property',
+        location: m.city || m.address || 'Sierra Leone',
+        address: m.address || '',
+        district: m.district || 'Unspecified',
+        stars: parseInt(m.stars) || 0,
+        image: (m.gallery && Array.isArray(m.gallery) && m.gallery.length > 0)
+          ? m.gallery[0]
+          : 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=800',
+        type: 'Hotel',
+        rooms: parseInt(m.rooms) || 0,
+        facilities: Array.isArray(m.facilities) ? m.facilities : []
+      })), [rawMembers]);
 
   // Sierra Leone Districts
   const SL_DISTRICTS = [
@@ -43,9 +48,11 @@ const Members: React.FC = () => {
   // Combined Filtering & Sorting Logic
   const processedMembers = useMemo(() => {
     let result = members.filter(m => {
-      const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.district?.toLowerCase().includes(searchTerm.toLowerCase());
+      const searchStr = searchTerm.toLowerCase();
+      const matchesSearch =
+        (m.name || '').toLowerCase().includes(searchStr) ||
+        (m.location || '').toLowerCase().includes(searchStr) ||
+        (m.district || '').toLowerCase().includes(searchStr);
 
       const matchesDistrict = selectedDistrict === 'All' || m.district === selectedDistrict;
       const matchesStars = selectedStars === 'All' || m.stars === parseInt(selectedStars);
