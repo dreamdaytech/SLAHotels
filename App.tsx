@@ -229,7 +229,7 @@ const Footer = () => {
             <ul className="space-y-4 text-slate-400 text-sm">
               <li className="flex items-center"><MapPin size={16} className="mr-3 text-emerald-500" /> 12 Siaka Stevens Street, Freetown</li>
               <li className="flex items-center"><Phone size={16} className="mr-3 text-emerald-500" /> +232 76 123 456</li>
-              <li className="flex items-center"><Mail size={16} className="mr-3 text-emerald-500" /> info@slah.org.sl</li>
+              <li className="flex items-center"><Mail size={16} className="mr-3 text-emerald-500" /> info@slahotels.org</li>
             </ul>
           </div>
           <div>

@@ -17,31 +17,31 @@ const Secretariat: React.FC = () => {
       name: 'Ms. Sia Koroma',
       position: 'Administrative Officer',
       image: '/assets/images/secretariat/admin_officer.png',
-      email: 'admin@slah.org.sl'
+      email: 'admin@slahotels.org'
     },
     {
       name: 'Mr. Samuel Bangura',
       position: 'Finance & Accounts Officer',
       image: '/assets/images/secretariat/finance_officer.png',
-      email: 'finance@slah.org.sl'
+      email: 'finance@slahotels.org'
     },
     {
       name: 'Mrs. Zainab Kamara',
       position: 'Communications & PR',
       image: '/assets/images/secretariat/comm_officer.png',
-      email: 'press@slah.org.sl'
+      email: 'press@slahotels.org'
     },
     {
       name: 'Mr. Alusine Sesay',
       position: 'IT & Systems Support',
       image: '/assets/images/secretariat/it_support.png',
-      email: 'support@slah.org.sl'
+      email: 'support@slahotels.org'
     },
     {
       name: 'Ms. Aminata Conteh',
       position: 'Office Assistant',
       image: '/assets/images/secretariat/office_assistant.png',
-      email: 'info@slah.org.sl'
+      email: 'info@slahotels.org'
     }
   ];
 
@@ -70,7 +70,7 @@ const Secretariat: React.FC = () => {
             <div className="h-1 w-12 bg-amber-500"></div>
             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-widest">Executive Leadership</h2>
           </div>
-          
+
           {executives.map((exec, idx) => (
             <div key={idx} className="bg-white rounded-[2.5rem] overflow-hidden shadow-xl border border-slate-100 flex flex-col lg:flex-row hover:shadow-2xl transition-all duration-500">
               <div className="lg:w-1/3 h-[400px] lg:h-auto relative">
@@ -88,7 +88,7 @@ const Secretariat: React.FC = () => {
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center space-x-2 text-slate-500 text-sm font-bold bg-slate-50 px-4 py-2 rounded-xl">
                     <Mail size={16} className="text-emerald-600" />
-                    <span>exec.secretary@slah.org.sl</span>
+                    <span>exec.secretary@slahotels.org</span>
                   </div>
                   <div className="flex items-center space-x-2 text-slate-500 text-sm font-bold bg-slate-50 px-4 py-2 rounded-xl">
                     <Award size={16} className="text-amber-500" />
@@ -136,7 +136,7 @@ const Secretariat: React.FC = () => {
               Our office is open Monday to Friday, 9:00 AM – 5:00 PM. For official inquiries regarding membership, policy, or media, please contact our team.
             </p>
             <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-              <a href="mailto:info@slah.org.sl" className="flex items-center space-x-3 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-900/20">
+              <a href="mailto:info@slahotels.org" className="flex items-center space-x-3 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-900/20">
                 <Mail size={20} />
                 <span>Email Official Inquiry</span>
               </a>
