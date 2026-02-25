@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useNavigate, Link, Routes, Route, useLocation } from 'react-router-dom';
+import { useNavigate, Link, Routes, Route, useLocation, useParams } from 'react-router-dom';
 import {
   Users, Building2, FileText, BarChart3, Settings, LogOut,
   CheckCircle2, XCircle, Clock, Search, Plus, UserPlus,
@@ -9,7 +9,7 @@ import {
   User as UserIcon, Copy, AlertTriangle, CheckCircle, Newspaper,
   Image as ImageIcon, Globe, Award, ChevronRight, FileCheck, Check, ChevronUp, ChevronDown,
   MoreHorizontal, MoreVertical, History, Filter, Phone, Scale, FileBadge, FileSignature, CheckSquare,
-  ShieldCheck, AlertCircle, ChevronLeft, Loader2, ClipboardList, ArrowRight, ArrowUp, ArrowDown, Save
+  ShieldCheck, AlertCircle, ChevronLeft, Loader2, ClipboardList, ArrowRight, ArrowUp, ArrowDown, Save, RotateCcw
 } from 'lucide-react';
 import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
@@ -20,31 +20,92 @@ import { isProfileComplete } from '../lib/utils';
 
 const Stats = ({ user }: { user: any }) => {
   const { hotels, profiles } = useAppContext();
+  const navigate = useNavigate();
 
   const approvedCount = hotels.filter(h => h.status === 'approved').length;
   const pendingCount = hotels.filter(h => h.status === 'pending').length;
+  const suspendedCount = hotels.filter(h => h.status === 'suspended').length;
+  const rejectedCount = hotels.filter(h => h.status === 'rejected').length;
+  const totalHotels = hotels.length;
   const usersCount = profiles.length;
 
-  const stats = [
-    { label: 'Total Members', value: approvedCount.toString(), icon: <Hotel className="text-emerald-600" />, color: 'bg-emerald-50' },
-    { label: 'Pending Apps', value: pendingCount.toString(), icon: <FileText className="text-amber-600" />, color: 'bg-amber-50' },
-    { label: 'System Users', value: usersCount.toString(), icon: <Users className="text-indigo-600" />, color: 'bg-indigo-50' },
-    { label: 'Avg Rating', value: '4.2', icon: <BarChart3 className="text-rose-600" />, color: 'bg-rose-50' },
+  const cards = [
+    {
+      label: 'Approved Members',
+      value: approvedCount,
+      sub: `of ${totalHotels} total`,
+      icon: <CheckCircle2 size={22} />,
+      gradient: 'from-emerald-500 to-teal-400',
+      bg: 'bg-emerald-50',
+      text: 'text-emerald-600',
+      bar: Math.round((approvedCount / Math.max(totalHotels, 1)) * 100),
+      barColor: 'bg-emerald-400',
+      link: '/dashboard/members',
+    },
+    {
+      label: 'Pending Applications',
+      value: pendingCount,
+      sub: 'awaiting review',
+      icon: <Clock size={22} />,
+      gradient: 'from-amber-500 to-orange-400',
+      bg: 'bg-amber-50',
+      text: 'text-amber-600',
+      bar: Math.round((pendingCount / Math.max(totalHotels, 1)) * 100),
+      barColor: 'bg-amber-400',
+      link: '/dashboard/applications',
+    },
+    {
+      label: 'System Users',
+      value: usersCount,
+      sub: 'registered accounts',
+      icon: <Users size={22} />,
+      gradient: 'from-indigo-500 to-violet-400',
+      bg: 'bg-indigo-50',
+      text: 'text-indigo-600',
+      bar: null,
+      barColor: '',
+      link: '/dashboard/users',
+    },
+    {
+      label: 'Inactive / Rejected',
+      value: suspendedCount + rejectedCount,
+      sub: `${suspendedCount} suspended · ${rejectedCount} rejected`,
+      icon: <XCircle size={22} />,
+      gradient: 'from-rose-500 to-pink-400',
+      bg: 'bg-rose-50',
+      text: 'text-rose-600',
+      bar: Math.round(((suspendedCount + rejectedCount) / Math.max(totalHotels, 1)) * 100),
+      barColor: 'bg-rose-400',
+      link: '/dashboard/applications',
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 mb-8 mt-2">
-      {stats.map((stat, i) => (
-        <div key={i} className="bg-white p-5 md:p-6 rounded-3xl shadow-sm border border-slate-100 flex md:block items-center justify-between md:justify-start">
-          <div className="flex items-center space-x-4 md:block md:space-x-0">
-            <div className={`p-3 rounded-2xl ${stat.color} w-fit`}>{stat.icon}</div>
-            <div className="md:mt-4">
-              <p className="text-slate-500 text-xs font-medium md:mb-1">{stat.label}</p>
-              <h3 className="text-2xl md:text-3xl font-bold text-slate-900 leading-none">{stat.value}</h3>
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5">
+      {cards.map((c, i) => (
+        <button key={i} onClick={() => navigate(c.link)}
+          className="group text-left bg-white rounded-[1.75rem] border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
+          {/* Gradient top strip */}
+          <div className={`h-1.5 w-full bg-gradient-to-r ${c.gradient}`} />
+          <div className="p-6">
+            {/* Icon + value row */}
+            <div className="flex items-start justify-between mb-4">
+              <div className={`p-3 rounded-2xl ${c.bg}`}>
+                <span className={c.text}>{c.icon}</span>
+              </div>
+              <span className={`text-4xl font-black tracking-tighter ${c.text}`}>{c.value}</span>
             </div>
+            {/* Label */}
+            <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-0.5">{c.label}</p>
+            <p className="text-[10px] text-slate-400 font-medium">{c.sub}</p>
+            {/* Progress bar */}
+            {c.bar !== null && (
+              <div className="mt-4 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${c.barColor}`} style={{ width: `${c.bar}%` }} />
+              </div>
+            )}
           </div>
-          <span className="hidden md:inline-block mt-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Live Status</span>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -57,74 +118,89 @@ const RecentActivity = () => {
   const formatRelativeTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
     return date.toLocaleDateString();
   };
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'registration': return <FileText size={14} />;
-      case 'approval': return <CheckCircle2 size={14} />;
-      case 'update': return <Hotel size={14} />;
-      case 'user': return <UserPlus size={14} />;
-      case 'event': return <Calendar size={14} />;
-      case 'news': return <Newspaper size={14} />;
-      default: return <Clock size={14} />;
-    }
+  const typeMap: Record<string, { icon: React.ReactNode; bg: string; text: string; label: string }> = {
+    registration: { icon: <FileText size={13} />, bg: 'bg-amber-50', text: 'text-amber-600', label: 'Registration' },
+    approval: { icon: <CheckCircle2 size={13} />, bg: 'bg-emerald-50', text: 'text-emerald-600', label: 'Approval' },
+    update: { icon: <Hotel size={13} />, bg: 'bg-indigo-50', text: 'text-indigo-600', label: 'Update' },
+    user: { icon: <UserPlus size={13} />, bg: 'bg-rose-50', text: 'text-rose-600', label: 'User' },
+    event: { icon: <Calendar size={13} />, bg: 'bg-violet-50', text: 'text-violet-600', label: 'Event' },
+    news: { icon: <Newspaper size={13} />, bg: 'bg-sky-50', text: 'text-sky-600', label: 'News' },
   };
 
-  const getColor = (type: string) => {
-    switch (type) {
-      case 'registration': return 'text-amber-600 bg-amber-50';
-      case 'approval': return 'text-emerald-600 bg-emerald-50';
-      case 'update': return 'text-indigo-600 bg-indigo-50';
-      case 'user': return 'text-rose-600 bg-rose-50';
-      default: return 'text-slate-600 bg-slate-50';
-    }
-  };
-
-  const displayActivities = activities.slice(0, 6);
+  const displayActivities = activities.slice(0, 7);
 
   return (
-    <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 h-full">
-      <h3 className="text-lg font-bold text-slate-900 mb-6">Recent Activity</h3>
-      <div className="space-y-6">
+    <div className="bg-white rounded-[1.75rem] border border-slate-100 shadow-sm overflow-hidden h-full flex flex-col">
+      {/* Header */}
+      <div className="px-6 pt-6 pb-4 border-b border-slate-50 flex items-center justify-between">
+        <div>
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Live Feed</p>
+          <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Recent Activity</h3>
+        </div>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-100 rounded-full">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Live</span>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="flex-1 px-4 py-4 overflow-y-auto">
         {displayActivities.length > 0 ? (
-          displayActivities.map((activity) => {
-            const colorClass = getColor(activity.type);
-            return (
-              <div key={activity.id} className="flex items-start space-x-4">
-                <div className={`mt-1 p-2 rounded-lg ${colorClass}`}>
-                  {getIcon(activity.type)}
+          <div className="space-y-0">
+            {displayActivities.map((activity, idx) => {
+              const t = typeMap[activity.type] ?? { icon: <Clock size={13} />, bg: 'bg-slate-50', text: 'text-slate-500', label: 'System' };
+              const isLast = idx === displayActivities.length - 1;
+              return (
+                <div key={activity.id} className="flex gap-3 group">
+                  {/* Timeline spine */}
+                  <div className="flex flex-col items-center pt-1">
+                    <div className={`p-2 rounded-xl ${t.bg} ${t.text} shrink-0 z-10`}>{t.icon}</div>
+                    {!isLast && <div className="w-px flex-1 bg-slate-100 my-1" />}
+                  </div>
+                  {/* Content */}
+                  <div className={`flex-1 pb-4 ${isLast ? '' : ''}`}>
+                    <div className="flex items-start justify-between gap-2 pt-1">
+                      <p className="text-[11px] font-bold text-slate-800 leading-snug group-hover:text-slate-900 transition-colors flex-1">{activity.text}</p>
+                      <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap shrink-0">{formatRelativeTime(activity.created_at)}</span>
+                    </div>
+                    <span className={`inline-block mt-1 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${t.bg} ${t.text}`}>{t.label}</span>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-800">{activity.text}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{formatRelativeTime(activity.created_at)}</p>
-                </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         ) : (
-          <div className="py-10 text-center text-slate-400">
-            <Clock size={24} className="mx-auto mb-2 opacity-20" />
-            <p className="text-sm font-medium">No recent logs</p>
+          <div className="py-12 flex flex-col items-center justify-center gap-3">
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                <Clock size={20} className="text-slate-300" />
+              </div>
+              <div className="absolute inset-0 rounded-full border-2 border-slate-200 animate-ping opacity-30" />
+            </div>
+            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">No recent activity</p>
           </div>
         )}
       </div>
+
+      {/* Footer CTA */}
       <button
         onClick={() => navigate('/dashboard/logs')}
-        className="w-full mt-8 py-3 text-sm font-bold text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition-colors border-t border-slate-50"
+        className="flex items-center justify-center gap-2 w-full py-4 border-t border-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 hover:bg-emerald-50 transition-all"
       >
-        View All Logs
+        View Full Log <ArrowRight size={12} />
       </button>
     </div>
   );
 };
+
 
 const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMoveToPending, isProcessing }: {
   app: any,
@@ -282,24 +358,49 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
 
             <div className="space-y-4">
               <label className="block text-[8px] font-black text-slate-400 uppercase mb-4">Submitted Documents</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {app.documents && Object.entries(app.documents).map(([key, url]) => (
-                  <a
-                    key={key}
-                    href={url as string}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between p-4 bg-slate-50 hover:bg-emerald-50 rounded-2xl group transition-all border border-slate-100"
-                  >
-                    <div className="flex items-center">
-                      <FileBadge className="text-slate-400 group-hover:text-emerald-500 mr-4 shrink-0" size={20} />
-                      <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                    </div>
-                    <Eye size={16} className="text-slate-300 group-hover:text-emerald-500" />
-                  </a>
-                ))}
-              </div>
+              {app.documents && Object.keys(app.documents).length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {Object.entries(app.documents).map(([key, url]) => {
+                    const docLabels: Record<string, string> = {
+                      certIncorporation: 'Certificate of Incorporation',
+                      bizRegCert: 'Business Registration Certificate',
+                      ntbCert: 'NTB License Certificate',
+                      taxClearance: 'Tax Clearance Certificate',
+                    };
+                    const label = docLabels[key] || key.replace(/([A-Z])/g, ' $1').trim();
+                    return (
+                      <a
+                        key={key}
+                        href={url as string}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-5 bg-slate-50 hover:bg-emerald-50 rounded-2xl group transition-all border border-slate-100 hover:border-emerald-200"
+                      >
+                        <div className="flex items-center space-x-4 min-w-0">
+                          <div className="p-3 bg-rose-50 group-hover:bg-emerald-100 rounded-xl shrink-0 transition-colors">
+                            <FileText className="text-rose-500 group-hover:text-emerald-600 transition-colors" size={20} />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block text-[10px] font-black text-slate-900 uppercase tracking-widest truncate">{label}</span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">PDF Document</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 shrink-0 ml-2">
+                          <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Open</span>
+                          <Eye size={16} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100 flex flex-col items-center justify-center">
+                  <FileText size={32} className="text-slate-200 mb-3" />
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No Documents Submitted</p>
+                </div>
+              )}
             </div>
+
 
             {app.complianceRemarks && (
               <div className="mt-8">
@@ -477,6 +578,502 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
   );
 };
 
+const ApplicationDetail = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { hotels: rawHotels, refreshData, showNotification } = useAppContext();
+  const [processing, setProcessing] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean; title: string; message: string; onConfirm: () => void; variant: 'danger' | 'warning' | 'info' | 'success';
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => { }, variant: 'warning' });
+
+  const askConfirm = (title: string, message: string, onConfirm: () => void, variant: 'danger' | 'warning' | 'info' | 'success' = 'warning') => {
+    setConfirmModal({ isOpen: true, title, message, onConfirm, variant });
+  };
+
+  const raw = (rawHotels || []).find((h: any) => h.id === id);
+  const app = raw ? {
+    ...raw,
+    hotelName: raw.hotel_name,
+    date: new Date(raw.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+    regNumber: raw.reg_number,
+    year: raw.year_established?.toString(),
+    roomTypes: raw.room_types,
+    otherAmenities: raw.other_amenities,
+    ntbLicense: raw.ntb_license,
+    complianceRemarks: raw.compliance_remarks,
+    signeeName: raw.signee_name,
+    signeePosition: raw.signee_position,
+    signeeDate: raw.signee_date,
+  } : null;
+
+  const runAction = async (statusValue: string, activityType: string, activityText: string) => {
+    setProcessing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Authentication session lost.');
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'super-admin')) throw new Error('Insufficient permissions.');
+      const { data, error } = await supabase.from('hotels').update({ status: statusValue }).eq('id', id!).select();
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('Update failed. Record may not exist.');
+      await supabase.from('activities').insert({ type: activityType, text: activityText, user_id: session.user.id });
+      await refreshData();
+      showNotification(`Status updated to ${statusValue}.`, 'success');
+      navigate('/dashboard/applications');
+    } catch (err: any) {
+      showNotification('Error: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleApprove = () => askConfirm('Approve Membership?', `Approve "${app?.hotelName}" and publish to the live member directory?`, () => runAction('approved', 'approval', `Admin approved "${app?.hotelName}"`), 'success');
+  const handleReject = () => askConfirm('Decline Registration?', `Decline the registration for "${app?.hotelName}"?`, () => runAction('rejected', 'rejection', `Admin rejected "${app?.hotelName}"`), 'danger');
+  const handleSuspend = () => askConfirm('Suspend Membership?', `Suspend "${app?.hotelName}"? They will be hidden from the public directory.`, () => runAction('suspended', 'suspension', `Admin suspended "${app?.hotelName}"`), 'warning');
+  const handleMoveToPending = () => askConfirm('Move to Pending?', `Move "${app?.hotelName}" back to Pending review?`, () => runAction('pending', 'update', `Admin moved "${app?.hotelName}" back to pending`), 'warning');
+
+  const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
+    pending: { label: 'Pending Review', dot: 'bg-amber-400', badge: 'bg-amber-50  text-amber-700  border-amber-200' },
+    approved: { label: 'Approved', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    rejected: { label: 'Rejected', dot: 'bg-rose-500', badge: 'bg-rose-50   text-rose-700   border-rose-200' },
+    suspended: { label: 'Suspended', dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600  border-slate-200' },
+  };
+  const sc = STATUS_CONFIG[app?.status] || STATUS_CONFIG['pending'];
+
+  if (!app) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-5">
+        <div className="p-6 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
+          <Hotel size={48} className="text-slate-300" />
+        </div>
+        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Application not found</p>
+        <button onClick={() => navigate('/dashboard/applications')} className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg">
+          <ChevronLeft size={14} /> Back to Applications
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto pb-24 -mt-2">
+
+      {/* ── HERO BANNER ─────────────────────────────────────────────── */}
+      <div className="relative rounded-[2rem] overflow-hidden mb-8 bg-slate-900 shadow-2xl shadow-slate-900/30">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-emerald-400/10 blur-3xl -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-white/5 blur-3xl translate-y-1/2 -translate-x-1/4" />
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '32px 32px' }} />
+        </div>
+
+        <div className="relative z-10 p-8 md:p-10">
+          {/* Breadcrumb */}
+          <button onClick={() => navigate('/dashboard/applications')} className="flex items-center gap-1.5 text-white/40 hover:text-white text-[10px] font-black uppercase tracking-widest mb-8 group transition-colors">
+            <ChevronLeft size={12} className="group-hover:-translate-x-0.5 transition-transform" />
+            Applications
+          </button>
+
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4 flex-wrap">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${sc.badge}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${sc.dot} ${app.status === 'pending' ? 'animate-pulse' : ''}`} />
+                  {sc.label}
+                </span>
+                <span className="text-white/20 hidden md:block">·</span>
+                <span className="text-white/35 text-[10px] font-bold uppercase tracking-widest">{app.date}</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tight leading-none mb-3">{app.hotelName}</h2>
+              <p className="text-white/45 text-sm font-medium">
+                {[app.address, app.city, app.district].filter(Boolean).join(', ')}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-wrap gap-2.5 shrink-0">
+              {app.status !== 'approved' && (
+                <button disabled={processing} onClick={handleApprove}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/30 disabled:opacity-50">
+                  {processing ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={13} />}
+                  {processing ? 'Processing…' : 'Approve'}
+                </button>
+              )}
+              {app.status !== 'rejected' && (
+                <button disabled={processing} onClick={handleReject}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-rose-900/40 disabled:opacity-50">
+                  <XCircle size={13} />
+                  {processing ? '…' : 'Decline'}
+                </button>
+              )}
+              {app.status === 'approved' && (
+                <button disabled={processing} onClick={handleSuspend}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-amber-900/40 disabled:opacity-50">
+                  <AlertTriangle size={13} />
+                  {processing ? '…' : 'Suspend'}
+                </button>
+              )}
+              {(app.status === 'approved' || app.status === 'rejected' || app.status === 'suspended') && (
+                <button disabled={processing} onClick={handleMoveToPending}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-sky-500 hover:bg-sky-400 active:bg-sky-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-sky-900/40 disabled:opacity-50">
+                  <RotateCcw size={13} />
+                  {processing ? '…' : 'Pending'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Quick-stat row */}
+          <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap gap-3">
+            {[
+              { icon: <Star size={12} fill="currentColor" />, label: 'Rating', value: app.stars ? `${app.stars} Star` : '—' },
+              { icon: <Building2 size={12} />, label: 'Rooms', value: app.rooms || '—' },
+              { icon: <Users size={12} />, label: 'Staff', value: app.employees || '—' },
+              { icon: <Clock size={12} />, label: 'Est.', value: app.year || '—' },
+            ].map(({ icon, label, value }) => (
+              <div key={label} className="flex items-center gap-2.5 bg-white/5 border border-white/8 rounded-xl px-4 py-2.5">
+                <span className="text-emerald-400/80">{icon}</span>
+                <div>
+                  <p className="text-[8px] font-black text-white/25 uppercase tracking-widest leading-none">{label}</p>
+                  <p className="text-[11px] font-black text-white mt-0.5">{value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── TWO-COLUMN GRID ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* LEFT — Sections A, C, D, F */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* ─── SECTION A ─── Hotel Information */}
+          <div className="rounded-[1.75rem] overflow-hidden shadow-md border border-emerald-100">
+            <div className="relative bg-gradient-to-r from-emerald-600 to-teal-500 px-8 py-6 flex items-center justify-between overflow-hidden">
+              <div className="absolute right-0 top-0 bottom-0 opacity-10 select-none pointer-events-none">
+                <span className="block text-[9rem] font-black text-white leading-none -translate-y-4 translate-x-4">A</span>
+              </div>
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30">
+                  <Info size={18} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-emerald-100/70 uppercase tracking-widest">Section A</p>
+                  <p className="text-lg font-black text-white uppercase tracking-tight">Hotel Information</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-8 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+              <div className="sm:col-span-2 pb-5 border-b border-slate-50">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Registered Address</p>
+                <p className="text-base font-bold text-slate-900">{app.address || '—'}</p>
+              </div>
+              {[
+                { label: 'City', v: app.city },
+                { label: 'District', v: app.district },
+                { label: 'Email', v: app.email },
+                { label: 'Contact', v: app.contact },
+              ].map(({ label, v }) => (
+                <div key={label} className="p-4 bg-slate-50 rounded-2xl">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+                  <p className="text-sm font-bold text-slate-900">{v || '—'}</p>
+                </div>
+              ))}
+              {app.website && (
+                <div className="sm:col-span-2 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                  <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-1">Website</p>
+                  <a href={app.website} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-emerald-700 hover:underline break-all">{app.website}</a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ─── SECTION C ─── Facilities & Classification */}
+          <div className="rounded-[1.75rem] overflow-hidden shadow-md border border-amber-100">
+            <div className="relative bg-gradient-to-r from-amber-500 to-orange-400 px-8 py-6 flex items-center justify-between overflow-hidden">
+              <div className="absolute right-0 top-0 bottom-0 opacity-10 select-none pointer-events-none">
+                <span className="block text-[9rem] font-black text-white leading-none -translate-y-4 translate-x-4">C</span>
+              </div>
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30">
+                  <Star size={18} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-amber-100/70 uppercase tracking-widest">Section C</p>
+                  <p className="text-lg font-black text-white uppercase tracking-tight">Facilities &amp; Classification</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-8 space-y-8">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-5 bg-amber-50 border border-amber-100 rounded-2xl">
+                  <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-3">Star Rating</p>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <Star key={i} size={22}
+                        fill={i <= parseInt(app.stars || 0) ? '#f59e0b' : 'none'}
+                        stroke={i <= parseInt(app.stars || 0) ? '#f59e0b' : '#fde68a'} />
+                    ))}
+                  </div>
+                </div>
+                <div className="p-5 bg-orange-50 border border-orange-100 rounded-2xl">
+                  <p className="text-[8px] font-black text-orange-500 uppercase tracking-widest mb-1">Total Rooms</p>
+                  <p className="text-5xl font-black text-slate-900 tracking-tighter">{app.rooms || '—'}</p>
+                </div>
+              </div>
+              {app.roomTypes && app.roomTypes.length > 0 && (
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3">Room Types</p>
+                  <div className="flex flex-wrap gap-2">
+                    {app.roomTypes.map((t: string) => (
+                      <span key={t} className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[10px] font-black uppercase tracking-widest">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {app.facilities && app.facilities.length > 0 && (
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3">In-House Facilities</p>
+                  <div className="flex flex-wrap gap-2">
+                    {app.facilities.map((f: string) => (
+                      <span key={f} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-black uppercase tracking-widest">{f}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {app.otherAmenities && (
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">Other Amenities</p>
+                  <p className="text-sm text-slate-600 leading-relaxed italic">{app.otherAmenities}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ─── SECTION D ─── Legal & Compliance */}
+          <div className="rounded-[1.75rem] overflow-hidden shadow-md border border-violet-100">
+            <div className="relative bg-gradient-to-r from-violet-600 to-purple-500 px-8 py-6 flex items-center justify-between overflow-hidden">
+              <div className="absolute right-0 top-0 bottom-0 opacity-10 select-none pointer-events-none">
+                <span className="block text-[9rem] font-black text-white leading-none -translate-y-4 translate-x-4">D</span>
+              </div>
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30">
+                  <Scale size={18} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-violet-100/70 uppercase tracking-widest">Section D</p>
+                  <p className="text-lg font-black text-white uppercase tracking-tight">Legal &amp; Compliance</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-5 bg-violet-50 border border-violet-100 rounded-2xl">
+                  <p className="text-[8px] font-black text-violet-500 uppercase tracking-widest mb-2">Tax ID (TIN)</p>
+                  <p className="text-lg font-black text-slate-900 tracking-tight">{app.tin || '—'}</p>
+                </div>
+                <div className="p-5 bg-purple-50 border border-purple-100 rounded-2xl">
+                  <p className="text-[8px] font-black text-purple-500 uppercase tracking-widest mb-2">NTB License</p>
+                  <p className="text-lg font-black text-slate-900 tracking-tight">{app.ntbLicense || '—'}</p>
+                </div>
+              </div>
+              {app.documents && Object.keys(app.documents).length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Submitted Documents</p>
+                  {Object.entries(app.documents).map(([key, url]) => {
+                    const labels: Record<string, string> = {
+                      certIncorporation: 'Certificate of Incorporation',
+                      bizRegCert: 'Business Registration',
+                      ntbCert: 'NTB License Certificate',
+                      taxClearance: 'Tax Clearance Certificate',
+                    };
+                    const label = labels[key] || key.replace(/([A-Z])/g, ' $1').trim();
+                    return (
+                      <a key={key} href={url as string} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center justify-between p-4 bg-white hover:bg-violet-50 border border-slate-100 hover:border-violet-200 rounded-2xl group transition-all">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-violet-50 group-hover:bg-violet-100 rounded-xl transition-colors">
+                            <FileText size={16} className="text-violet-500" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-slate-800 uppercase tracking-wide">{label}</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">PDF Document</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="text-[9px] font-black text-violet-600 uppercase tracking-widest">Open</span>
+                          <Eye size={14} className="text-violet-500" />
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-8 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-2">
+                  <FileText size={28} className="text-slate-200" />
+                  <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">No Documents Submitted</p>
+                </div>
+              )}
+              {app.complianceRemarks && (
+                <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                  <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-2">Compliance Remarks</p>
+                  <p className="text-sm text-slate-700 leading-relaxed">{app.complianceRemarks}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ─── SECTION F ─── Gallery */}
+          <div className="rounded-[1.75rem] overflow-hidden shadow-md border border-rose-100">
+            <div className="relative bg-gradient-to-r from-rose-500 to-pink-500 px-8 py-6 flex items-center justify-between overflow-hidden">
+              <div className="absolute right-0 top-0 bottom-0 opacity-10 select-none pointer-events-none">
+                <span className="block text-[9rem] font-black text-white leading-none -translate-y-4 translate-x-4">F</span>
+              </div>
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30">
+                  <ImageIcon size={18} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-rose-100/70 uppercase tracking-widest">Section F</p>
+                  <p className="text-lg font-black text-white uppercase tracking-tight">Property Gallery</p>
+                </div>
+              </div>
+              {app.gallery && app.gallery.length > 0 && (
+                <span className="relative z-10 text-[10px] font-black text-rose-100/80 uppercase tracking-widest bg-white/10 border border-white/20 px-3 py-1.5 rounded-full">
+                  {app.gallery.length} photo{app.gallery.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <div className="bg-white p-6">
+              {app.gallery && app.gallery.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {app.gallery.map((url: string, idx: number) => (
+                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                      className="group relative block aspect-video rounded-2xl overflow-hidden border border-slate-100 hover:border-rose-400 transition-all shadow-sm">
+                      <img src={url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-rose-900/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-start p-3">
+                        <span className="text-white text-[10px] font-black uppercase tracking-widest">View</span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-14 flex flex-col items-center justify-center gap-3">
+                  <ImageIcon size={40} className="text-slate-200" />
+                  <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">No images provided</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT — Sections B, E, Meta */}
+        <div className="space-y-6">
+
+          {/* ─── SECTION B ─── Ownership */}
+          <div className="rounded-[1.75rem] overflow-hidden shadow-md border border-blue-100">
+            <div className="relative bg-gradient-to-r from-blue-600 to-indigo-500 px-6 py-5 flex items-center overflow-hidden">
+              <div className="absolute right-0 top-0 bottom-0 opacity-10 select-none pointer-events-none">
+                <span className="block text-[7rem] font-black text-white leading-none -translate-y-3 translate-x-3">B</span>
+              </div>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30">
+                  <Users size={16} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-blue-100/70 uppercase tracking-widest">Section B</p>
+                  <p className="text-sm font-black text-white uppercase tracking-tight">Ownership</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white divide-y divide-slate-50">
+              {[
+                { label: 'Owner / Proprietor', value: app.owner },
+                { label: 'Managing Director / GM', value: app.manager },
+                { label: 'Business Reg #', value: app.regNumber },
+                { label: 'Year Established', value: app.year },
+                { label: 'Total Employees', value: app.employees },
+              ].map(({ label, value }) => (
+                <div key={label} className="px-6 py-4">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+                  <p className="text-sm font-bold text-slate-900">{value || '—'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ─── SECTION E ─── Commitment / Signature (dark) */}
+          <div className="relative rounded-[1.75rem] overflow-hidden shadow-2xl shadow-slate-900/20">
+            <div className="absolute inset-0 bg-slate-900" />
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full bg-emerald-400/10 blur-3xl" />
+              <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+            </div>
+            <div className="relative z-10">
+              {/* Coloured top bar */}
+              <div className="bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-1.5 flex items-center gap-2">
+                <ShieldCheck size={10} className="text-white/70" />
+                <p className="text-[8px] font-black text-white/70 uppercase tracking-widest">Section E · Association Commitment</p>
+              </div>
+              <div className="p-6 space-y-5">
+                <p className="text-sm text-white/40 leading-relaxed italic">
+                  "I acknowledge and agree to abide by the rules and regulations of the Sierra Leone Association of Hotels."
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                    <CheckSquare size={12} className="text-emerald-400" />
+                  </div>
+                  <span className="text-[9px] font-black text-emerald-400/80 uppercase tracking-widest">Electronically Verified</span>
+                </div>
+                <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
+                  <p className="text-[8px] font-black text-emerald-400/60 uppercase tracking-widest mb-3">Digitally Signed By</p>
+                  <p className="text-xl font-black text-white uppercase tracking-tight leading-snug">{app.signeeName || '—'}</p>
+                  <p className="text-[10px] text-white/35 font-bold uppercase tracking-widest mt-1">{app.signeePosition || ''}</p>
+                  <div className="pt-3 mt-2 border-t border-white/10">
+                    <p className="text-[8px] font-black text-white/25 uppercase tracking-widest mb-1">Date Signed</p>
+                    <p className="text-xs font-bold text-white/50">{app.signeeDate || '—'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Application Meta */}
+          <div className="bg-white rounded-[1.75rem] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-50 bg-slate-50">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Application Info</p>
+            </div>
+            <div className="divide-y divide-slate-50">
+              <div className="px-6 py-4">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Submitted</p>
+                <p className="text-sm font-bold text-slate-900">{app.date}</p>
+              </div>
+              <div className="px-6 py-4">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">Status</p>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${sc.badge}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+                  {sc.label}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(c => ({ ...c, isOpen: false }))}
+        onConfirm={() => { confirmModal.onConfirm(); setConfirmModal(c => ({ ...c, isOpen: false })); }}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+      />
+    </div>
+  );
+};
+
+
 const ConfirmationModal = ({
   isOpen,
   onClose,
@@ -565,7 +1162,8 @@ const ConfirmationModal = ({
 
 const ActionDropdown = ({
   actions,
-  align = 'right'
+  align = 'right',
+  label = 'Actions'
 }: {
   actions: {
     label: string,
@@ -574,62 +1172,102 @@ const ActionDropdown = ({
     variant?: 'default' | 'danger' | 'success' | 'warning',
     disabled?: boolean
   }[],
-  align?: 'left' | 'right'
+  align?: 'left' | 'right',
+  label?: string
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const btnRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  const openMenu = () => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const menuWidth = 224; // w-56
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward = spaceBelow < 280;
+
+    setMenuStyle({
+      position: 'fixed',
+      width: menuWidth,
+      ...(align === 'right'
+        ? { right: window.innerWidth - rect.right }
+        : { left: rect.left }),
+      ...(openUpward
+        ? { bottom: window.innerHeight - rect.top + 8 }
+        : { top: rect.bottom + 8 })
+    });
+    setIsOpen(true);
+  };
+
+  const variantClass = (variant?: string) => {
+    if (variant === 'danger') return 'text-rose-600 hover:bg-rose-50 hover:text-rose-700';
+    if (variant === 'success') return 'text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700';
+    if (variant === 'warning') return 'text-amber-600 hover:bg-amber-50 hover:text-amber-700';
+    return 'text-slate-600 hover:bg-slate-50 hover:text-slate-900';
+  };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        ref={btnRef}
+        onClick={openMenu}
         className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
       >
         <MoreVertical size={20} />
       </button>
 
       {isOpen && (
-        <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 py-3 z-50 animate-in fade-in zoom-in-95 duration-150`}>
-          {actions.map((action, idx) => (
-            <button
-              key={idx}
-              disabled={action.disabled}
-              onClick={() => {
-                action.onClick();
-                setIsOpen(false);
-              }}
-              className={`w-full flex items-center px-5 py-3 text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50 ${action.variant === 'danger'
-                ? 'text-rose-600 hover:bg-rose-50'
-                : action.variant === 'success'
-                  ? 'text-emerald-600 hover:bg-emerald-50'
-                  : 'text-slate-600 hover:bg-slate-50'
-                }`}
-            >
-              {action.icon && <span className="mr-3">{action.icon}</span>}
-              {action.label}
-            </button>
-          ))}
-        </div>
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-[60]"
+            onClick={() => setIsOpen(false)}
+          />
+          {/* Panel */}
+          <div
+            style={menuStyle}
+            className="bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 py-4 z-[70] animate-in fade-in zoom-in-95 duration-200 origin-top-right ring-8 ring-white"
+          >
+            <div className="px-6 pb-3 border-b border-slate-50 mb-2">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+            </div>
+
+            {actions.map((action, idx) => (
+              <button
+                key={idx}
+                disabled={action.disabled}
+                onClick={() => {
+                  action.onClick();
+                  setIsOpen(false);
+                }}
+                className={`w-full px-6 py-4 text-left text-xs font-bold flex items-center transition-all group disabled:opacity-40 disabled:cursor-not-allowed ${variantClass(action.variant)}`}
+              >
+                {action.icon && (
+                  <span className="mr-3 shrink-0">{action.icon}</span>
+                )}
+                {action.label}
+              </button>
+            ))}
+
+            <div className="mt-2 px-4">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="w-full py-2 bg-slate-50 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-100 transition-colors"
+              >
+                Close Menu
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
 };
 
+
 const Applications = () => {
   const { hotels: rawHotels, refreshData, showNotification } = useAppContext();
-  const [selectedApp, setSelectedApp] = useState<any>(null);
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'suspended'>('pending');
   const [processing, setProcessing] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
@@ -694,7 +1332,6 @@ const Applications = () => {
 
       await refreshData();
       showNotification('Application moved back to Pending.', 'info');
-      setSelectedApp(null);
     } catch (err: any) {
       console.error('Error moving to pending:', err);
       showNotification('Error: ' + err.message, 'error');
@@ -710,79 +1347,48 @@ const Applications = () => {
     const hotel = rawHotels.find(h => h.id === id);
     const { complete, missing } = isProfileComplete(hotel);
 
+    const doApprove = async () => {
+      setProcessing(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Authentication session lost. Please log in again.');
+
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+        if (!profile || (profile.role !== 'admin' && profile.role !== 'super-admin')) {
+          throw new Error('Your account permissions do not allow this action.');
+        }
+
+        const { data, error } = await supabase.from('hotels').update({ status: 'approved' }).eq('id', id).select();
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error('Update failed. The record may not exist.');
+
+        await supabase.from('activities').insert({
+          type: 'approval',
+          text: `Admin approved "${apps.find(a => a.id === id)?.hotelName || 'a hotel'}"`,
+          user_id: session.user.id
+        });
+
+        await refreshData();
+        showNotification('Membership Approved. Hotel profile is now live in the directory.', 'success');
+        setActiveTab('approved');
+      } catch (err: any) {
+        showNotification('Error approving application: ' + (err.message || 'Unknown error'), 'error');
+      } finally {
+        setProcessing(false);
+      }
+    };
+
     if (!complete) {
-      showNotification('error', 'Cannot approve: Registration is incomplete.');
       askConfirm(
-        'Incomplete Registration',
-        `This record cannot be approved yet. The following mandatory fields are missing: \n\n• ${missing.join('\n• ')} \n\nPlease notify the member to complete Sections A-F before approval.`,
-        () => { },
-        'info'
+        'Incomplete Registration — Approve Anyway?',
+        `Warning: This registration is missing the following fields:\n\n• ${missing.join('\n• ')}\n\nYou can still approve, but the profile may appear incomplete in the directory. Proceed?`,
+        doApprove,
+        'warning'
       );
       return;
     }
 
-    setProcessing(true);
-    try {
-      // 1. Verify Session & Permissions
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('[DEBUG] Current session user:', session?.user?.id, session?.user?.email);
-
-      if (!session) {
-        throw new Error('Authentication session lost. Please log in again.');
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
-
-      console.log('[DEBUG] DB Profile Role:', profile?.role);
-
-      if (!profile || (profile.role !== 'admin' && profile.role !== 'super-admin')) {
-        console.error('[DEBUG] Insufficient role in DB:', profile?.role);
-        throw new Error('Your account permissions in the database do not allow this action.');
-      }
-
-      // 2. Perform Update
-      const { data, error } = await supabase
-        .from('hotels')
-        .update({ status: 'approved' })
-        .eq('id', id)
-        .select();
-
-      console.log('[DEBUG] Update response:', { data, error });
-
-      if (error) {
-        console.error('[DEBUG] Supabase error:', error);
-        throw error;
-      }
-
-      if (!data || data.length === 0) {
-        console.warn('[DEBUG] No rows updated. Checking if record exists...');
-        const { data: checkData } = await supabase.from('hotels').select('id, status').eq('id', id).single();
-        console.log('[DEBUG] Existing record status:', checkData);
-        throw new Error('Update failed. You may not have permission to modify this record or the record does not exist.');
-      }
-
-      // Log activity
-      const activityResult = await supabase.from('activities').insert({
-        type: 'approval',
-        text: `Admin approved "${apps.find(a => a.id === id)?.hotelName || 'a hotel'}"`,
-        user_id: session.user.id
-      });
-      console.log('Activity log response:', activityResult);
-
-      await refreshData();
-      showNotification('Membership Approved. Hotel profile is now live in the directory.', 'success');
-      setSelectedApp(null); // Close modal on success
-      setActiveTab('approved'); // Auto-switch to Approved tab
-    } catch (err: any) {
-      console.error('CRITICAL: Error approving application:', err);
-      showNotification('Error updating application status: ' + (err.message || 'Unknown error'), 'error');
-    } finally {
-      setProcessing(false);
-    }
+    doApprove();
   };
 
   const handleReject = async (id: string) => {
@@ -836,8 +1442,7 @@ const Applications = () => {
 
       await refreshData();
       showNotification('Application Rejected.', 'info');
-      setSelectedApp(null); // Close modal on success
-      setActiveTab('rejected'); // Auto-switch to Rejected tab
+      setActiveTab('rejected');
     } catch (err: any) {
       console.error('CRITICAL: Error rejecting application:', err);
       showNotification('Error updating application status: ' + (err.message || 'Unknown error'), 'error');
@@ -867,7 +1472,6 @@ const Applications = () => {
 
           await refreshData();
           showNotification('Membership suspended.', 'warning');
-          setSelectedApp(null);
           setActiveTab('suspended');
         } catch (err: any) {
           showNotification('Error: ' + err.message, 'error');
@@ -885,39 +1489,38 @@ const Applications = () => {
     <div className="space-y-8">
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden h-full">
         <div className="p-4 md:p-10 border-b border-slate-50">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 md:mb-10">
-            <div>
-              <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tighter">Membership Applications</h2>
-              <p className="text-slate-500 text-xs md:text-sm font-medium mt-1">Reviewing and archiving joining requests.</p>
-            </div>
-
-            <div className="flex bg-slate-100 p-1 rounded-2xl w-full lg:w-fit overflow-x-auto no-scrollbar">
-              <button
-                onClick={() => setActiveTab('pending')}
-                className={`flex items-center justify-center px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all min-w-fit flex-1 lg:flex-none ${activeTab === 'pending' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                <Clock size={14} className="mr-2" /> Pending ({apps.filter(a => a.status === 'pending').length})
-              </button>
-              <button
-                onClick={() => setActiveTab('approved')}
-                className={`flex items-center justify-center px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all min-w-fit flex-1 lg:flex-none ${activeTab === 'approved' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                <FileCheck size={14} className="mr-2" /> Approved ({apps.filter(a => a.status === 'approved').length})
-              </button>
-              <button
-                onClick={() => setActiveTab('rejected')}
-                className={`flex items-center justify-center px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all min-w-fit flex-1 lg:flex-none ${activeTab === 'rejected' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                <History size={14} className="mr-2" /> Rejected ({apps.filter(a => a.status === 'rejected').length})
-              </button>
-              <button
-                onClick={() => setActiveTab('suspended')}
-                className={`flex items-center justify-center px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all min-w-fit flex-1 lg:flex-none ${activeTab === 'suspended' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                <AlertTriangle size={14} className="mr-2" /> Suspended ({apps.filter(a => a.status === 'suspended').length})
-              </button>
-            </div>
+          <div className="mb-8 md:mb-10">
+            <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tighter">Membership Applications</h2>
+            <p className="text-slate-500 text-xs md:text-sm font-medium mt-1">Reviewing and archiving joining requests.</p>
           </div>
+
+          <div className="flex bg-slate-100 p-1 rounded-2xl w-full overflow-x-auto no-scrollbar mb-0">
+            <button
+              onClick={() => setActiveTab('pending')}
+              className={`flex items-center justify-center px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all min-w-fit flex-1 ${activeTab === 'pending' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <Clock size={14} className="mr-2" /> Pending ({apps.filter(a => a.status === 'pending').length})
+            </button>
+            <button
+              onClick={() => setActiveTab('approved')}
+              className={`flex items-center justify-center px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all min-w-fit flex-1 ${activeTab === 'approved' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <FileCheck size={14} className="mr-2" /> Approved ({apps.filter(a => a.status === 'approved').length})
+            </button>
+            <button
+              onClick={() => setActiveTab('rejected')}
+              className={`flex items-center justify-center px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all min-w-fit flex-1 ${activeTab === 'rejected' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <History size={14} className="mr-2" /> Rejected ({apps.filter(a => a.status === 'rejected').length})
+            </button>
+            <button
+              onClick={() => setActiveTab('suspended')}
+              className={`flex items-center justify-center px-4 md:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all min-w-fit flex-1 ${activeTab === 'suspended' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <AlertTriangle size={14} className="mr-2" /> Suspended ({apps.filter(a => a.status === 'suspended').length})
+            </button>
+          </div>
+
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3 md:py-4 bg-slate-50 rounded-3xl px-4 md:px-6">
             <div className="flex items-center text-slate-400 text-[10px] font-black uppercase tracking-widest">
@@ -969,11 +1572,12 @@ const Applications = () => {
                   </td>
                   <td className="px-10 py-6 text-right">
                     <ActionDropdown
+                      label="Application Actions"
                       actions={[
                         {
                           label: app.status === 'pending' ? 'Review & Approve' : app.status === 'rejected' ? 'Restore / Approve' : 'View Details',
                           icon: <Eye size={14} />,
-                          onClick: () => setSelectedApp(app)
+                          onClick: () => navigate('/dashboard/applications/' + app.id)
                         },
                         {
                           label: 'Approve Membership',
@@ -981,6 +1585,12 @@ const Applications = () => {
                           variant: 'success',
                           disabled: app.status === 'approved',
                           onClick: () => askConfirm('Approve Membership?', `Are you sure you want to approve "${app.hotelName}"?`, () => handleApprove(app.id), 'success')
+                        },
+                        {
+                          label: 'Unapprove — Move to Pending',
+                          icon: <RotateCcw size={14} />,
+                          disabled: app.status !== 'approved',
+                          onClick: () => askConfirm('Unapprove Membership?', `This will move "${app.hotelName}" back to Pending and remove them from the live directory. Continue?`, () => handleMoveToPending(app.id), 'warning')
                         },
                         {
                           label: 'Decline Registration',
@@ -1041,17 +1651,7 @@ const Applications = () => {
         </div>
       )}
 
-      {selectedApp && (
-        <ApplicationModal
-          app={selectedApp}
-          onClose={() => setSelectedApp(null)}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          onSuspend={handleSuspend}
-          onMoveToPending={handleMoveToPending}
-          isProcessing={processing}
-        />
-      )}
+
 
       <ConfirmationModal
         isOpen={confirmModal.isOpen}
@@ -1276,12 +1876,12 @@ const MembersManagement = () => {
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-slate-100">
-      <div className="p-4 md:p-8 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-lg md:text-xl font-bold text-slate-900">Official Member Directory</h2>
-          <p className="text-slate-500 text-xs md:text-sm">Active certified members</p>
+      <div className="p-4 md:p-8 border-b border-slate-50">
+        <div className="mb-6">
+          <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tighter">Official Member Directory</h2>
+          <p className="text-slate-500 text-xs md:text-sm font-medium mt-1">Active certified members</p>
         </div>
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 md:space-x-4 w-full sm:w-auto items-stretch sm:items-center">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 md:space-x-4 w-full items-stretch sm:items-center">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
@@ -1316,6 +1916,7 @@ const MembersManagement = () => {
           <Link to="/register" className="bg-emerald-600 text-white px-3 md:px-5 py-2 rounded-xl font-bold text-[10px] md:text-sm hover:bg-emerald-700 text-center">Add Member</Link>
         </div>
       </div>
+
       <div className="p-4 md:p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex bg-slate-50 p-1 rounded-2xl w-full md:w-auto">
           {['all', 'approved', 'pending', 'suspended', 'rejected'].map((status) => (
@@ -1415,6 +2016,7 @@ const MembersManagement = () => {
                 </td>
                 <td className="px-4 md:px-8 py-4 md:py-5 text-right">
                   <ActionDropdown
+                    label="Member Actions"
                     actions={[
                       {
                         label: 'View Profile',
@@ -3170,11 +3772,13 @@ const NewsManagement = () => {
               <Plus size={16} className="mr-2" /> Create Article
             </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[600px]">
+          <div>
+            <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
                 <tr>
                   <th className="px-4 md:px-8 py-4">Article</th>
+                  <th className="hidden md:table-cell px-4 md:px-8 py-4">Author</th>
+                  <th className="hidden md:table-cell px-4 md:px-8 py-4">Date</th>
                   <th className="px-4 md:px-8 py-4">Status</th>
                   <th className="px-4 md:px-8 py-4 text-right">Actions</th>
                 </tr>
@@ -3191,14 +3795,14 @@ const NewsManagement = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-sm text-slate-500">{article.author}</td>
-                    <td className="px-8 py-5 text-sm text-slate-400">{article.date}</td>
-                    <td className="px-8 py-5">
+                    <td className="hidden md:table-cell px-8 py-5 text-sm text-slate-500">{article.author}</td>
+                    <td className="hidden md:table-cell px-8 py-5 text-sm text-slate-400">{article.date}</td>
+                    <td className="px-4 md:px-8 py-4 md:py-5">
                       <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest">
                         {article.status || 'Published'}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-4 md:px-8 py-4 md:py-5 text-right">
                       <div className="flex justify-end space-x-1">
                         <button onClick={() => openEdit(article)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg"><Edit3 size={16} /></button>
                         <button onClick={() => handleDelete(article.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 size={16} /></button>
@@ -3383,7 +3987,8 @@ const ActivityLogs = () => {
 };
 
 const ProfileEdit = ({ user }: { user: any }) => {
-  const { hotels, loading, refreshData, showNotification } = useAppContext();
+  const { userHotel, userHotelLoading, refreshData, showNotification } = useAppContext();
+  const loading = userHotelLoading;
   const [saving, setSaving] = useState(false);
   const [hotelId, setHotelId] = useState<string | null>(null);
   const [status, setStatus] = useState('pending');
@@ -3430,44 +4035,39 @@ const ProfileEdit = ({ user }: { user: any }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!user || hotels.length === 0) return;
+    if (!user || !userHotel) return;
 
-    let hotel = hotels.find(h => h.user_id === user.id);
-    if (!hotel) {
-      hotel = hotels.find(h => h.email === user.email);
-    }
+    const hotel = userHotel;
 
-    if (hotel) {
-      setHotelId(hotel.id);
-      setHotelName(hotel.hotel_name || '');
-      setAddress(hotel.address || '');
-      setCity(hotel.city || '');
-      setDistrict(hotel.district || '');
-      setEmail(hotel.email || '');
-      setContact(hotel.contact || '');
-      setWebsite(hotel.website || '');
-      setOwner(hotel.owner || '');
-      setManager(hotel.manager || '');
-      setRegNumber(hotel.reg_number || '');
-      setYear(hotel.year_established?.toString() || '');
-      setEmployees(hotel.employees?.toString() || '');
-      setRooms(hotel.rooms?.toString() || '');
-      setStars(hotel.stars || 4);
-      setRoomTypes(hotel.room_types || []);
-      setFacilities(hotel.facilities || []);
-      setOtherAmenities(hotel.other_amenities || '');
-      setTin(hotel.tin || '');
-      setNtbLicense(hotel.ntb_license || '');
-      setComplianceRemarks(hotel.compliance_remarks || '');
-      setExistingDocuments(hotel.documents || {});
-      setSigneeName(hotel.signee_name || '');
-      setSigneePosition(hotel.signee_position || '');
-      if (hotel.signee_date) setSigneeDate(new Date(hotel.signee_date).toISOString().split('T')[0]);
-      setExistingGallery(hotel.gallery || []);
-      setGalleryPreviews(hotel.gallery || []);
-      setStatus(hotel.status || 'pending');
-    }
-  }, [user, hotels]);
+    setHotelId(hotel.id);
+    setHotelName(hotel.hotel_name || '');
+    setAddress(hotel.address || '');
+    setCity(hotel.city || '');
+    setDistrict(hotel.district || '');
+    setEmail(hotel.email || '');
+    setContact(hotel.contact || '');
+    setWebsite(hotel.website || '');
+    setOwner(hotel.owner || '');
+    setManager(hotel.manager || '');
+    setRegNumber(hotel.reg_number || '');
+    setYear(hotel.year_established?.toString() || '');
+    setEmployees(hotel.employees?.toString() || '');
+    setRooms(hotel.rooms?.toString() || '');
+    setStars(hotel.stars || 4);
+    setRoomTypes(hotel.room_types || []);
+    setFacilities(hotel.facilities || []);
+    setOtherAmenities(hotel.other_amenities || '');
+    setTin(hotel.tin || '');
+    setNtbLicense(hotel.ntb_license || '');
+    setComplianceRemarks(hotel.compliance_remarks || '');
+    setExistingDocuments(hotel.documents || {});
+    setSigneeName(hotel.signee_name || '');
+    setSigneePosition(hotel.signee_position || '');
+    if (hotel.signee_date) setSigneeDate(new Date(hotel.signee_date).toISOString().split('T')[0]);
+    setExistingGallery(hotel.gallery || []);
+    setGalleryPreviews(hotel.gallery || []);
+    setStatus(hotel.status || 'pending');
+  }, [user, userHotel]);
 
   const toggleFacility = (f: string) => {
     setFacilities(prev => prev.includes(f) ? prev.filter(item => item !== f) : [...prev, f]);
@@ -3483,16 +4083,32 @@ const ProfileEdit = ({ user }: { user: any }) => {
     setNewDocuments(prev => ({ ...prev, [key]: file }));
   };
 
+  const removeDocument = (key: string) => {
+    if (!window.confirm('Remove this document? You will need to re-upload it if needed.')) return;
+    setExistingDocuments(prev => { const next = { ...prev }; delete next[key]; return next; });
+    setNewDocuments(prev => { const next = { ...prev }; delete next[key]; return next; });
+    // reset the hidden file input so the same file can be re-selected if needed
+    const input = document.getElementById(key) as HTMLInputElement | null;
+    if (input) input.value = '';
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+
+    const allowedTypes = ['image/webp', 'image/jpeg', 'image/jpg', 'image/png'];
+    const validFiles = (Array.from(files) as File[]).filter(f => allowedTypes.includes(f.type));
+    if (validFiles.length !== files.length) {
+      showNotification('Only WebP, JPEG/JPG, and PNG images are allowed.', 'error');
+    }
+    if (validFiles.length === 0) return;
 
     const currentCount = galleryImages.length + existingGallery.length;
     const remainingSlots = 10 - currentCount;
 
     if (remainingSlots <= 0) return;
 
-    const newFiles = Array.from(files).slice(0, remainingSlots) as File[];
+    const newFiles = validFiles.slice(0, remainingSlots) as File[];
     setGalleryImages(prev => [...prev, ...newFiles].slice(0, 10));
 
     newFiles.forEach(file => {
@@ -3552,7 +4168,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
         other_amenities: otherAmenities, tin, ntb_license: ntbLicense,
         compliance_remarks: complianceRemarks,
         documents: { ...existingDocuments, ...uploadedDocumentUrls },
-        signee_name: signeeName, signee_position: signeePosition, signee_date: signeeDate,
+        signee_name: signeeName, signee_position: signeePosition, signee_date: signeeDate || null,
         gallery: [...existingGallery, ...uploadedGalleryUrls]
       };
 
@@ -3567,16 +4183,24 @@ const ProfileEdit = ({ user }: { user: any }) => {
       }
       if (error) throw error;
 
-      await supabase.from('activities').insert({
-        type: 'update',
-        text: `Member updated their property profile for "${hotelName}".`,
-        user_id: user.id
-      });
+      // Fire-and-forget: do not await activity log to avoid hanging the save operation
+      void (async () => {
+        try {
+          await supabase.from('activities').insert({
+            type: 'update',
+            text: `Member updated their property profile for "${hotelName}".`,
+            user_id: user.id
+          });
+        } catch (e: any) {
+          console.warn('Activity log failed:', e);
+        }
+      })();
 
       showNotification('Profile updated successfully!', 'success');
       setGalleryImages([]);
       setNewDocuments({});
-      await refreshData();
+      // Fire-and-forget: do not await refreshData to avoid hanging the save operation
+      refreshData().catch((e) => console.warn('Background refresh failed:', e));
     } catch (err: any) {
       console.error('Error saving profile:', err.message);
       showNotification('Error updating profile: ' + err.message, 'error');
@@ -3588,7 +4212,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
   if (loading) return (
     <div className="p-20 text-center bg-white rounded-[3rem] border border-slate-100 animate-pulse">
       <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-6"></div>
-      <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Processing...</p>
+      <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Loading Profile...</p>
     </div>
   );
 
@@ -3667,15 +4291,56 @@ const ProfileEdit = ({ user }: { user: any }) => {
             </section>
 
             <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
-              <div className="flex items-center mb-4 border-b border-slate-100 pb-4"><Scale className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION D: Compliance & Documentation</h3></div>
+              <div className="flex items-center mb-4 border-b border-slate-100 pb-4"><Scale className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION D: Compliance &amp; Documentation</h3></div>
+              <p className="text-slate-400 text-xs mb-8 italic font-medium">Upload official PDF documents for verification. Accepted format: PDF only.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div><label className="block text-sm font-bold text-slate-600 mb-2">TIN Number *</label><input required type="text" value={tin} onChange={(e) => setTin(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
                 <div><label className="block text-sm font-bold text-slate-600 mb-2">NTB License Number *</label><input required type="text" value={ntbLicense} onChange={(e) => setNtbLicense(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-                <div className="space-y-4"><label className="block text-sm font-bold text-slate-600">Cert of Incorporation</label><div className="flex items-center space-x-4"><button type="button" onClick={() => document.getElementById('certIncorporation')?.click()} className="flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 font-bold text-sm"><UploadCloud size={16} /><span>{newDocuments.certIncorporation || existingDocuments.certIncorporation ? 'Attached' : 'Upload'}</span></button><input type="file" id="certIncorporation" className="hidden" onChange={(e) => handleDocUpload(e, 'certIncorporation')} /></div></div>
-                <div className="space-y-4"><label className="block text-sm font-bold text-slate-600">Biz Registration Cert</label><div className="flex items-center space-x-4"><button type="button" onClick={() => document.getElementById('bizRegCert')?.click()} className="flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 font-bold text-sm"><UploadCloud size={16} /><span>{newDocuments.bizRegCert || existingDocuments.bizRegCert ? 'Attached' : 'Upload'}</span></button><input type="file" id="bizRegCert" className="hidden" onChange={(e) => handleDocUpload(e, 'bizRegCert')} /></div></div>
+
+                {([
+                  { key: 'certIncorporation', label: 'Certificate of Incorporation' },
+                  { key: 'bizRegCert', label: 'Business Registration Certificate' },
+                  { key: 'ntbCert', label: 'NTB License Certificate' },
+                  { key: 'taxClearance', label: 'Tax Clearance Certificate' },
+                ] as { key: string; label: string }[]).map(({ key, label }) => (
+                  <div key={key} className="space-y-2">
+                    <label className="block text-sm font-bold text-slate-600">{label}</label>
+                    <div className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${(newDocuments as any)[key] ? 'border-emerald-400 bg-emerald-50' : (existingDocuments as any)[key] ? 'border-slate-200 bg-slate-50' : 'border-dashed border-slate-200 bg-slate-50/50'}`}>
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <div className={`p-2 rounded-lg shrink-0 ${(newDocuments as any)[key] || (existingDocuments as any)[key] ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                          <FileText size={18} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-700 truncate">
+                            {(newDocuments as any)[key] ? (newDocuments as any)[key].name : (existingDocuments as any)[key] ? 'Document uploaded' : 'No file selected'}
+                          </p>
+                          <p className="text-[10px] text-slate-400">PDF only</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 shrink-0 ml-2">
+                        {(existingDocuments as any)[key] && !(newDocuments as any)[key] && (
+                          <a href={(existingDocuments as any)[key]} target="_blank" rel="noopener noreferrer" className="p-2 bg-white border border-slate-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all" title="View document">
+                            <Eye size={14} />
+                          </a>
+                        )}
+                        {((existingDocuments as any)[key] || (newDocuments as any)[key]) && (
+                          <button type="button" onClick={() => removeDocument(key)} className="p-2 bg-white border border-rose-200 text-rose-500 rounded-lg hover:bg-rose-50 transition-all" title="Remove document">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        <button type="button" onClick={() => document.getElementById(key)?.click()} className="flex items-center space-x-1 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all">
+                          <UploadCloud size={14} /><span>{(newDocuments as any)[key] || (existingDocuments as any)[key] ? 'Replace' : 'Upload'}</span>
+                        </button>
+                      </div>
+                    </div>
+                    <input type="file" id={key} className="hidden" accept=".pdf" onChange={(e) => handleDocUpload(e, key)} />
+                  </div>
+                ))}
+
                 <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Compliance Remarks</label><textarea value={complianceRemarks} onChange={(e) => setComplianceRemarks(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none h-24 bg-slate-50" /></div>
               </div>
             </section>
+
 
             <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
               <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><FileSignature className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION E: Commitment</h3></div>
@@ -3687,22 +4352,40 @@ const ProfileEdit = ({ user }: { user: any }) => {
             </section>
 
             <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
-              <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><ImageIcon className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION F: Media Gallery</h3></div>
+              <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
+                <div className="flex items-center"><ImageIcon className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION F: Media Gallery</h3></div>
+                <span className={`text-xs font-black px-3 py-1 rounded-full ${galleryPreviews.length >= 10 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
+                  {galleryPreviews.length} / 10 photos
+                </span>
+              </div>
+              {galleryPreviews.length === 0 && (
+                <div className="py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100 flex flex-col items-center justify-center mb-6">
+                  <ImageIcon size={40} className="text-slate-200 mb-3" />
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No photos yet — add up to 10 images</p>
+                </div>
+              )}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {galleryPreviews.map((img, idx) => (
                   <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden group border border-slate-100">
                     <img src={img} alt="Gallery" className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => removeImage(idx)} className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+                    <button type="button" onClick={() => removeImage(idx)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600">
+                      <X size={12} />
+                    </button>
+                    {idx < existingGallery.length && (
+                      <span className="absolute bottom-2 left-2 text-[8px] font-black bg-black/50 text-white px-2 py-0.5 rounded-full uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">Saved</span>
+                    )}
                   </div>
                 ))}
                 {galleryPreviews.length < 10 && (
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-500 transition-all">
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-500 hover:bg-emerald-50 transition-all">
                     <Plus size={24} className="mb-2" /><span className="text-[10px] font-bold uppercase">Add Photo</span>
                   </button>
                 )}
               </div>
-              <input type="file" ref={fileInputRef} onChange={handleImageUpload} multiple className="hidden" />
+              <input type="file" ref={fileInputRef} onChange={handleImageUpload} multiple accept="image/webp,image/jpeg,image/jpg,image/png,.webp,.jpg,.jpeg,.png" className="hidden" />
             </section>
+
           </>
         ) : (
           <div className="bg-emerald-900 rounded-[3rem] p-12 md:p-20 text-center shadow-2xl relative overflow-hidden">
@@ -3776,6 +4459,41 @@ function MemberOverview({ user }: { user: any }) {
           </Link>
         </div>
       </div>
+
+      {/* ── Complete Application Banner (pending members only) ─────────────── */}
+      {status === 'pending' && (
+        <div className="rounded-[2rem] bg-gradient-to-r from-emerald-700 to-emerald-800 p-8 flex flex-col md:flex-row items-start md:items-center gap-6 shadow-2xl shadow-emerald-900/30 relative overflow-hidden">
+          {/* Decorative background icon */}
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-10">
+            <ClipboardList size={120} />
+          </div>
+          {/* Left: status icon */}
+          <div className="shrink-0 w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center">
+            <CheckCircle2 size={30} className="text-white" />
+          </div>
+          {/* Centre: copy */}
+          <div className="flex-1 relative z-10">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Section A Received</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">Under Review</span>
+            </div>
+            <h3 className="text-white font-black text-xl mb-1">Complete your application to speed up approval</h3>
+            <p className="text-emerald-200 text-sm leading-relaxed">
+              Your hotel identity (Section A) has been received. Fill in <strong className="text-white">Sections B – F</strong> of the registration form so our membership committee has everything they need to approve your application quickly.
+            </p>
+          </div>
+          {/* Right: CTA */}
+          <div className="shrink-0 relative z-10">
+            <Link
+              to="/register"
+              className="flex items-center gap-2 bg-white text-emerald-700 font-black text-sm px-5 py-3 rounded-xl hover:bg-emerald-50 transition-colors shadow-lg whitespace-nowrap"
+            >
+              Complete Sections B–F <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Status Card */}
@@ -4069,11 +4787,18 @@ function SettingsView({ user }: { user: any }) {
 // --- Main Dashboard Component ---
 
 export default function Dashboard() {
-  const { user, refreshData } = useAppContext();
+  const { user, refreshData, newApplicationCount, clearNewApplicationCount } = useAppContext();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Clear badge whenever admin navigates to the Applications page
+  useEffect(() => {
+    if (location.pathname.startsWith('/dashboard/applications') || location.pathname === '/dashboard/applications') {
+      clearNewApplicationCount();
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!user) {
@@ -4096,13 +4821,18 @@ export default function Dashboard() {
 
   const menuItems = [
     { name: 'Overview', path: '/dashboard', icon: <LayoutDashboard size={20} />, roles: ['super-admin', 'admin', 'member'] },
-    { name: 'Applications', path: '/dashboard/applications', icon: <FileText size={20} />, roles: ['super-admin', 'admin'] },
+    { name: 'My Profile', path: '/dashboard/profile', icon: <Building2 size={20} />, roles: ['member'] },
+    {
+      name: 'Applications', path: '/dashboard/applications',
+      icon: <FileText size={20} />,
+      roles: ['super-admin', 'admin'],
+      badge: isAdmin && newApplicationCount > 0 ? newApplicationCount : 0
+    },
     { name: 'Members', path: '/dashboard/members', icon: <Hotel size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Events', path: '/dashboard/events', icon: <Calendar size={20} />, roles: ['super-admin', 'admin', 'member'] },
     { name: 'News', path: '/dashboard/news', icon: <Newspaper size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Users', path: '/dashboard/users', icon: <Users size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Logs', path: '/dashboard/logs', icon: <History size={20} />, roles: ['super-admin', 'admin'] },
-    { name: 'My Profile', path: '/dashboard/profile', icon: <Building2 size={20} />, roles: ['member'] },
     { name: 'Settings', path: '/dashboard/settings', icon: <Settings size={20} />, roles: ['super-admin', 'admin', 'member'] },
   ].filter(item => item.roles.includes(user.role));
 
@@ -4133,10 +4863,22 @@ export default function Dashboard() {
                 } ${isCollapsed ? 'justify-center space-x-0' : 'justify-start space-x-3'}`}
               title={isCollapsed ? item.name : ''}
             >
-              <div className="flex-shrink-0 flex items-center justify-center">
+              {/* Icon with optional badge dot when collapsed */}
+              <div className="flex-shrink-0 flex items-center justify-center relative">
                 {item.icon}
+                {(item as any).badge > 0 && isCollapsed && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 border-2 border-slate-900">
+                    {(item as any).badge > 9 ? '9+' : (item as any).badge}
+                  </span>
+                )}
               </div>
-              {!isCollapsed && <span className="truncate">{item.name}</span>}
+              {!isCollapsed && <span className="truncate flex-1">{item.name}</span>}
+              {/* Badge pill on right when expanded */}
+              {!isCollapsed && (item as any).badge > 0 && (
+                <span className="ml-auto min-w-[20px] h-[20px] bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-1 animate-pulse">
+                  {(item as any).badge > 9 ? '9+' : (item as any).badge}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -4157,7 +4899,11 @@ export default function Dashboard() {
               <Menu size={22} />
             </button>
             <h1 className="text-lg md:text-xl font-bold text-slate-900 capitalize truncate max-w-[150px] md:max-w-none">
-              {location.pathname === '/dashboard' ? 'Overview' : location.pathname.split('/').pop()?.replace('-', ' ')}
+              {location.pathname === '/dashboard'
+                ? 'Overview'
+                : location.pathname.includes('/applications/')
+                  ? 'Application Review'
+                  : location.pathname.split('/').pop()?.replace(/-/g, ' ')}
             </h1>
           </div>
           <div className="flex items-center space-x-4">
@@ -4165,9 +4911,19 @@ export default function Dashboard() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input type="text" placeholder="Quick search..." className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500 w-64 transition-all" />
             </div>
-            <button className="p-2 text-slate-400 hover:text-emerald-600 relative transition-colors">
+            <button
+              className="p-2 text-slate-400 hover:text-emerald-600 relative transition-colors"
+              onClick={() => { navigate('/dashboard/applications'); clearNewApplicationCount(); }}
+              title={isAdmin && newApplicationCount > 0 ? `${newApplicationCount} new application${newApplicationCount !== 1 ? 's' : ''}` : 'Notifications'}
+            >
               <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+              {isAdmin && newApplicationCount > 0 ? (
+                <span className="absolute top-1 right-1 min-w-[16px] h-[16px] bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 border-2 border-white animate-bounce">
+                  {newApplicationCount > 9 ? '9+' : newApplicationCount}
+                </span>
+              ) : (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+              )}
             </button>
             <div className="h-8 w-px bg-slate-100 mx-2"></div>
             <div className="flex items-center space-x-3">
@@ -4186,9 +4942,37 @@ export default function Dashboard() {
           <Routes>
             <Route path="/" element={
               isAdmin ? (
-                <div className="space-y-8">
+                <div className="space-y-6">
+                  {/* Welcome banner */}
+                  <div className="relative rounded-[1.75rem] overflow-hidden bg-slate-900 shadow-xl">
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                      <div className="absolute -top-10 -right-10 w-64 h-64 rounded-full bg-emerald-400/10 blur-3xl" />
+                      <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-indigo-400/10 blur-3xl" />
+                      <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }} />
+                    </div>
+                    <div className="relative z-10 px-8 py-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div>
+                        <p className="text-[9px] font-black text-emerald-400/70 uppercase tracking-widest mb-1">Sierra Leone Association of Hotels</p>
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-tight">
+                          Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {(user?.name || user?.email || '').split(' ')[0]} 👋
+                        </h2>
+                        <p className="text-white/35 text-xs font-medium mt-1">Here's what's happening across the SLAH platform today.</p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Live</span>
+                        </div>
+                        <span className="text-[9px] font-black text-white/25 uppercase tracking-widest">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats row */}
                   <Stats user={user} />
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                  {/* Main content grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">
                       <Applications />
                     </div>
@@ -4196,15 +4980,35 @@ export default function Dashboard() {
                       <RecentActivity />
                     </div>
                   </div>
+
+                  {/* System Performance (super-admin only) */}
                   {user.role === 'super-admin' && (
-                    <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-center justify-between border border-slate-800">
-                      <div>
-                        <h3 className="text-xl font-bold mb-2">System Performance</h3>
-                        <p className="text-slate-400 text-sm">Real-time health check of SLAH databases and portals.</p>
+                    <div className="relative rounded-[1.75rem] overflow-hidden bg-slate-900 border border-slate-800 shadow-xl">
+                      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                        <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-violet-400/10 blur-3xl" />
                       </div>
-                      <div className="flex space-x-4 mt-6 md:mt-0">
-                        <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-bold uppercase tracking-widest">Database: OK</div>
-                        <div className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 text-xs font-bold uppercase tracking-widest">Uptime: 99.9%</div>
+                      <div className="relative z-10 px-8 py-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        <div>
+                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Infrastructure</p>
+                          <h3 className="text-lg font-black text-white uppercase tracking-tight">System Performance</h3>
+                          <p className="text-slate-500 text-xs font-medium mt-1">Real-time health check of SLAH databases and portals.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          {[
+                            { label: 'Database', value: 'Operational', color: 'emerald' },
+                            { label: 'Uptime', value: '99.9%', color: 'indigo' },
+                            { label: 'Auth', value: 'Active', color: 'teal' },
+                            { label: 'Storage', value: 'OK', color: 'violet' },
+                          ].map(s => (
+                            <div key={s.label} className={`flex items-center gap-2 px-4 py-2 bg-${s.color}-500/10 border border-${s.color}-500/20 rounded-2xl`}>
+                              <span className={`w-1.5 h-1.5 rounded-full bg-${s.color}-400`} />
+                              <div>
+                                <p className={`text-[8px] font-black text-${s.color}-400/60 uppercase tracking-widest`}>{s.label}</p>
+                                <p className={`text-xs font-black text-${s.color}-400`}>{s.value}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -4214,6 +5018,7 @@ export default function Dashboard() {
               )
             } />
             <Route path="/applications" element={<Applications />} />
+            <Route path="/applications/:id" element={<ApplicationDetail />} />
             <Route path="/members" element={<MembersManagement />} />
             <Route path="/events" element={<EventsManagement />} />
             <Route path="/news" element={<NewsManagement />} />

@@ -11,11 +11,11 @@ interface AppContextType {
   setUser: (user: any) => void;
   profile: any | null;
   hotels: any[];
-  members: any[]; // Used in Home.tsx
+  members: any[];
   profiles: any[];
   news: any[];
   events: any[];
-  activities: any[]; // Added activities
+  activities: any[];
   loading: boolean;
   notification: Notification | null;
   showNotification: (message: string, type: Notification['type']) => void;
@@ -23,6 +23,8 @@ interface AppContextType {
   refreshData: () => Promise<void>;
   userHotel: any | null;
   userHotelLoading: boolean;
+  newApplicationCount: number;
+  clearNewApplicationCount: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -35,11 +37,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [profiles, setProfiles] = useState<any[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]); // Added activities
+  const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userHotel, setUserHotel] = useState<any | null>(null);
   const [userHotelLoading, setUserHotelLoading] = useState(false);
   const [notification, setNotification] = useState<Notification | null>(null);
+  const [newApplicationCount, setNewApplicationCount] = useState(0);
+
+  const clearNewApplicationCount = () => setNewApplicationCount(0);
 
   const showNotification = (message: string, type: Notification['type'] = 'info') => {
     setNotification({ message, type });
@@ -169,16 +174,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             if (!mounted) return;
             setUserHotel(hotelData || null);
             setUserHotelLoading(false);
+
+            // Re-fetch all app data now that the authenticated session JWT is active.
+            // This ensures RLS policies (e.g. is_admin()) see the correct user and
+            // return all hotels visible to this role (fixes missing pending hotel for admins).
+            await fetchAppData();
           } else {
             setUserState(null);
             setProfile(null);
             setUserHotel(null);
+            // Fetch public data for logged-out state
+            await fetchAppData();
           }
         });
 
         subscription = authSub;
 
-        // 3. Fetch collective data
+        // 3. Fetch initial public data (runs as anon before auth listener fires)
         await fetchAppData();
 
       } catch (error: any) {
@@ -200,11 +212,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     initApp();
 
+    // ── Supabase Realtime: auto-refresh when hotels table changes ──────────
+    const hotelChannel = supabase
+      .channel('hotels-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'hotels' },
+        (payload) => {
+          // A new hotel application just came in
+          if (payload.new?.status === 'pending') {
+            setNewApplicationCount(prev => prev + 1);
+          }
+          fetchAppData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'hotels' },
+        () => { fetchAppData(); }
+      )
+      .subscribe();
+
     return () => {
       mounted = false;
-      if (subscription) {
-        subscription.unsubscribe();
-      }
+      if (subscription) subscription.unsubscribe();
+      supabase.removeChannel(hotelChannel);
     };
   }, []);
 
@@ -227,6 +259,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         showNotification,
         clearNotification,
         refreshData,
+        newApplicationCount,
+        clearNewApplicationCount,
       }}
     >
       {children}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, CheckCircle2, Star, Hotel, FileCheck, Landmark, ClipboardList, Image as ImageIcon, X, UploadCloud, Plus, Globe, Users, Building2, Scale, FileBadge, FileSignature, CheckSquare, Lock, Mail, UserPlus, ArrowRight, Loader2, AlertTriangle, LogIn, Clock, LogOut } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Star, Hotel, FileCheck, Landmark, ClipboardList, Image as ImageIcon, X, UploadCloud, Plus, Globe, Users, Building2, Scale, FileBadge, FileSignature, CheckSquare, Lock, Mail, UserPlus, ArrowRight, Loader2, AlertTriangle, LogIn, Clock, LogOut, FileText, Eye, Trash2 } from 'lucide-react';
 import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
@@ -8,8 +8,11 @@ import { isProfileComplete } from '../lib/utils';
 
 const Register: React.FC = () => {
   const { user, userHotel, userHotelLoading, refreshData, showNotification } = useAppContext();
+  const navigate = useNavigate();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState('');
   const [galleryImages, setGalleryImages] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,6 +29,8 @@ const Register: React.FC = () => {
   const [district, setDistrict] = useState('');
   const [email, setEmail] = useState('');
   const [contact, setContact] = useState('');
+  const [countryCode, setCountryCode] = useState('+232');
+  const [contactLocal, setContactLocal] = useState('');
   const [website, setWebsite] = useState('');
   const [owner, setOwner] = useState('');
   const [manager, setManager] = useState('');
@@ -44,6 +49,7 @@ const Register: React.FC = () => {
   const [complianceRemarks, setComplianceRemarks] = useState('');
   const [documents, setDocuments] = useState<{ [key: string]: File }>({});
   const [documentStatus, setDocumentStatus] = useState<{ [key: string]: boolean }>({});
+  const [removedDocKeys, setRemovedDocKeys] = useState<Set<string>>(new Set());
 
   // Section E: Commitment
   const [signeeName, setSigneeName] = useState('');
@@ -63,6 +69,17 @@ const Register: React.FC = () => {
     if (!file) return;
     setDocuments(prev => ({ ...prev, [key]: file }));
     setDocumentStatus(prev => ({ ...prev, [key]: true }));
+    // Unmark as removed if user re-uploads after removing
+    setRemovedDocKeys(prev => { const next = new Set(prev); next.delete(key); return next; });
+  };
+
+  const removeDocument = (key: string) => {
+    if (!window.confirm('Remove this document? You will need to re-upload it if needed.')) return;
+    setRemovedDocKeys(prev => new Set(prev).add(key));
+    setDocuments(prev => { const next = { ...prev }; delete next[key]; return next; });
+    setDocumentStatus(prev => { const next = { ...prev }; delete next[key]; return next; });
+    const input = document.getElementById(key) as HTMLInputElement | null;
+    if (input) input.value = '';
   };
 
   // Sync existing hotel data if available
@@ -99,9 +116,7 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      let currentUserId = user?.id;
-
-      // 0. Handle account creation first if not logged in
+      // ── STEP 1: New account creation (not yet logged in) ──────────────────
       if (!user) {
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: accountEmail,
@@ -117,21 +132,26 @@ const Register: React.FC = () => {
 
         if (signUpError) throw signUpError;
         if (!signUpData.user) throw new Error('Failed to create account.');
-        currentUserId = signUpData.user.id;
 
-        // 0.1 Explicitly set password_changed: true for frontend registrations
-        // We add a small delay to ensure the DB trigger has finished creating the profile
+        // Explicitly set password_changed flag once DB trigger creates the profile
         setTimeout(async () => {
           await supabase
             .from('profiles')
             .update({ password_changed: true })
-            .eq('id', currentUserId);
-        }, 1000);
+            .eq('id', signUpData.user!.id);
+        }, 1500);
 
-        // Add a small delay for session propagation
-        await new Promise(resolve => setTimeout(resolve, 500));
-        await refreshData();
+        // Show the email-confirmation waiting screen and stop here.
+        // The hotel form is only accessible after the email is confirmed.
+        setConfirmEmail(accountEmail);
+        setAwaitingConfirmation(true);
+        setLoading(false);
+        window.scrollTo(0, 0);
+        return; // ← do NOT proceed to hotel insert yet
       }
+
+      // ── STEP 2+ : User is already logged in (email confirmed) ─────────────
+      const currentUserId = user.id;
 
       // 1. Upload Gallery Images
       const galleryUrls = await Promise.all(
@@ -188,7 +208,16 @@ const Register: React.FC = () => {
         tin,
         ntb_license: ntbLicense,
         compliance_remarks: complianceRemarks,
-        documents: documentStatus.certIncorporation || documentStatus.bizRegCert ? { ...userHotel?.documents, ...documentUrls } : userHotel?.documents,
+        documents: (() => {
+          // Start from existing docs, remove any the user explicitly removed
+          const base: Record<string, string> = {};
+          if (userHotel?.documents) {
+            for (const [k, v] of Object.entries(userHotel.documents as Record<string, string>)) {
+              if (!removedDocKeys.has(k)) base[k] = v;
+            }
+          }
+          return { ...base, ...documentUrls };
+        })(),
         signee_name: signeeName,
         signee_position: signeePosition,
         signee_date: signeeDate,
@@ -197,10 +226,10 @@ const Register: React.FC = () => {
         gallery: galleryUrls.length > 0 ? [...(userHotel?.gallery || []), ...galleryUrls] : userHotel?.gallery
       };
 
-      // Ensure status is 'pending' if completeness is missing
-      const { complete } = isProfileComplete(hotelPayload);
-      if (complete && userHotel?.status === 'approved') {
-        hotelPayload.status = 'approved';
+      // On update: always preserve the existing status (never downgrade an approved hotel).
+      // On new registration: default to 'pending' for admin review.
+      if (userHotel) {
+        hotelPayload.status = userHotel.status;
       } else {
         hotelPayload.status = 'pending';
       }
@@ -212,21 +241,29 @@ const Register: React.FC = () => {
       if (error) throw error;
 
       // 4. Log Activity
-      await supabase.from('activities').insert({
-        type: userHotel ? 'update' : 'registration',
-        text: userHotel
-          ? `Hotel "${hotelName}" updated their registration details.`
-          : `New membership application submitted for "${hotelName}".`,
-        user_id: currentUserId
-      });
+      try {
+        await supabase.from('activities').insert({
+          type: userHotel ? 'update' : 'registration',
+          text: userHotel
+            ? `Hotel "${hotelName}" updated their registration details.`
+            : `New membership application submitted for "${hotelName}".`,
+          user_id: currentUserId
+        });
+      } catch (_) { /* non-critical */ }
 
+      // ── Always unblock the button first, THEN refresh in the background ──
       setSubmitted(true);
+      setLoading(false);
       window.scrollTo(0, 0);
-      await refreshData();
+
+      // Background data refresh — errors here must NOT re-block the UI
+      try { await refreshData(); } catch (_) { /* silent */ }
+
     } catch (err: any) {
       console.error('Error submitting form:', err.message);
       showNotification('Error: ' + err.message, 'error');
     } finally {
+      // Safety net: ensure loading is always cleared
       setLoading(false);
     }
   };
@@ -235,15 +272,22 @@ const Register: React.FC = () => {
     const files = e.target.files;
     if (!files) return;
 
+    const allowedTypes = ['image/webp', 'image/jpeg', 'image/jpg', 'image/png'];
+    const validFiles = (Array.from(files) as File[]).filter(f => allowedTypes.includes(f.type));
+    if (validFiles.length !== files.length) {
+      showNotification('Only WebP, JPEG/JPG, and PNG images are allowed.', 'error');
+    }
+    if (validFiles.length === 0) return;
+
     const currentCount = galleryImages.length;
     const remainingSlots = 10 - currentCount;
 
     if (remainingSlots <= 0) {
-      alert("You have already reached the limit of 10 images.");
+      showNotification('You have already reached the limit of 10 images.', 'error');
       return;
     }
 
-    const newFiles = Array.from(files).slice(0, remainingSlots) as File[];
+    const newFiles = validFiles.slice(0, remainingSlots) as File[];
     setGalleryImages(prev => [...prev, ...newFiles].slice(0, 10));
 
     newFiles.forEach(file => {
@@ -273,8 +317,73 @@ const Register: React.FC = () => {
     );
   }
 
+  // ── Email confirmation waiting screen ──────────────────────────────────────
+  // Shown (a) right after a fresh signup, or (b) if the user is logged in
+  // but their email is not yet confirmed.
+  const emailNotConfirmed = user && !user.email_confirmed_at;
+  if (awaitingConfirmation || emailNotConfirmed) {
+    const emailToShow = confirmEmail || user?.email || '';
+    return (
+      <div className="pt-32 pb-24 min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="max-w-xl w-full mx-auto px-4">
+          <div className="bg-white rounded-3xl p-12 text-center shadow-2xl border border-emerald-100">
+            {/* Icon */}
+            <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8">
+              <Mail size={48} />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-3">Confirm Your Email</h1>
+            <p className="text-slate-500 text-base mb-2">
+              We've sent a confirmation link to:
+            </p>
+            <p className="text-emerald-700 font-black text-lg mb-8 break-all">{emailToShow}</p>
+
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 mb-6 text-left">
+              <h4 className="text-emerald-800 font-bold text-sm mb-2 flex items-center gap-2">
+                <ShieldCheck size={16} /> What to do next
+              </h4>
+              <ol className="text-emerald-700 text-xs leading-relaxed space-y-1 list-decimal list-inside">
+                <li>Open the email we just sent you.</li>
+                <li>Click the <strong>"Confirm your email"</strong> link.</li>
+                <li>Return to this page — Section A will unlock automatically.</li>
+              </ol>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 mb-8 text-left">
+              <p className="text-amber-700 text-xs font-medium leading-relaxed">
+                <strong>Can't find it?</strong> Check your spam/junk folder. The link expires in 24 hours.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    await supabase.auth.resend({ type: 'signup', email: emailToShow });
+                    showNotification('Confirmation email resent!', 'success');
+                  } catch {
+                    showNotification('Could not resend. Please try again shortly.', 'error');
+                  }
+                }}
+                className="bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-800 transition-colors shadow-lg shadow-emerald-900/20"
+              >
+                Resend Confirmation Email
+              </button>
+              <button
+                onClick={() => { setAwaitingConfirmation(false); supabase.auth.signOut(); }}
+                className="text-slate-400 text-xs font-bold hover:text-rose-500 transition-colors"
+              >
+                Use a different email — Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted) {
     const isApproved = userHotel?.status === 'approved';
+    const isPending = userHotel?.status === 'pending';
     return (
       <div className="pt-32 pb-24 min-h-screen flex items-center justify-center bg-slate-50">
         <div className="max-w-xl w-full mx-auto px-4">
@@ -283,32 +392,41 @@ const Register: React.FC = () => {
               <CheckCircle2 size={48} />
             </div>
             <h1 className="text-3xl font-bold text-slate-900 mb-4">
-              {isApproved ? 'Profile Updated!' : 'Registration Submitted!'}
+              {isApproved ? 'Profile Updated!' : 'Section A Submitted!'}
             </h1>
             <p className="text-slate-500 text-lg mb-8">
               {isApproved
                 ? `Your updates for "${hotelName}" have been saved successfully.`
-                : `Thank you for registering "${hotelName}" with the Sierra Leone Association of Hotels.`}
+                : `Thank you! Your hotel identity for "${hotelName}" has been received by the SLAH Secretariat.`}
             </p>
 
-            {!isApproved && (
-              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 mb-8 text-left">
-                <h4 className="text-emerald-800 font-bold text-sm mb-2 flex items-center">
-                  <Mail size={16} className="mr-2" /> Check Your Email
+            {/* Pending: strong CTA to complete the rest of the form */}
+            {isPending && (
+              <div className="bg-emerald-700 rounded-2xl p-6 mb-6 text-left relative overflow-hidden">
+                <div className="absolute top-0 right-0 opacity-10 p-4"><ClipboardList size={80} /></div>
+                <h4 className="text-white font-black text-base mb-2 flex items-center gap-2">
+                  <span className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-xs font-black">!</span>
+                  Action Required: Complete Your Application
                 </h4>
-                <p className="text-emerald-700 text-xs leading-relaxed">
-                  We've sent a verification link to your email. Please click the link to confirm your account and complete your registration profile.
+                <p className="text-emerald-100 text-sm leading-relaxed mb-4">
+                  To help our membership committee process your application quickly, please complete <strong>Sections B through F</strong> of the registration form now. A more complete application speeds up approval.
                 </p>
+                <button
+                  onClick={() => setSubmitted(false)}
+                  className="w-full bg-white text-emerald-700 font-black py-3 rounded-xl hover:bg-emerald-50 transition-colors text-sm"
+                >
+                  Continue → Complete Sections B–F Now
+                </button>
               </div>
             )}
 
-            {!isApproved && (
+            {!isApproved && !isPending && (
               <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 mb-8 text-left">
                 <h4 className="text-amber-800 font-bold text-sm mb-2 flex items-center">
                   <Clock size={16} className="mr-2" /> What happens next?
                 </h4>
                 <p className="text-amber-700 text-xs leading-relaxed">
-                  Our membership committee will review your initial application (Section A). Once approved, you'll be granted access to complete the full official registration (Sections B-F).
+                  Our membership committee will review your application. You will be notified once a decision has been made.
                 </p>
               </div>
             )}
@@ -316,7 +434,10 @@ const Register: React.FC = () => {
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => window.location.href = isApproved ? '#/dashboard' : '#/'}
-                className="bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-800 transition-colors shadow-lg shadow-emerald-900/20"
+                className={`px-8 py-3 rounded-xl font-bold transition-colors shadow-lg ${isPending
+                  ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-none text-sm'
+                  : 'bg-emerald-700 text-white hover:bg-emerald-800 shadow-emerald-900/20'
+                  }`}
               >
                 {isApproved ? 'Go to Dashboard' : 'Return Home'}
               </button>
@@ -327,36 +448,10 @@ const Register: React.FC = () => {
     );
   }
 
-  // Pending Review Screen
-  if (user && userHotel?.status === 'pending' && !submitted) {
-    return (
-      <div className="pt-32 pb-24 min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="max-w-xl w-full mx-auto px-4">
-          <div className="bg-white rounded-3xl p-12 text-center shadow-2xl border border-emerald-100">
-            <div className="w-24 h-24 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-8">
-              <Clock size={48} />
-            </div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-4">Application Pending</h1>
-            <p className="text-slate-500 text-lg mb-8">
-              Your initial hotel registration for <span className="text-slate-900 font-bold">{userHotel.hotel_name}</span> is currently being reviewed by the SLAH Secretariat.
-            </p>
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 mb-8 text-left">
-              <h4 className="text-amber-800 font-bold text-sm mb-2 flex items-center">
-                <ShieldCheck size={16} className="mr-2" /> Next Steps
-              </h4>
-              <p className="text-amber-700 text-xs leading-relaxed">
-                Once your application is approved, you will be granted access to complete the full Official Hotel Registration form (Sections B-F) and gain access to the member portal.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <button onClick={() => window.location.href = '#/'} className="bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-800 transition-colors">Return Home</button>
-              <button onClick={() => supabase.auth.signOut()} className="text-slate-400 text-xs font-bold hover:text-rose-500 transition-colors">Sign out from {user.email}</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+
+  // NOTE: Pending members now fall through to the main form below.
+  // The form shows a notification banner and Sections B-F are unlocked for them.
+
 
 
   return (
@@ -382,6 +477,36 @@ const Register: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* ── Pending: Action-required notification banner ───────────────────── */}
+        {userHotel?.status === 'pending' && (
+          <div className="mb-8 rounded-[2rem] bg-gradient-to-r from-emerald-700 to-emerald-800 p-8 flex flex-col md:flex-row items-start md:items-center gap-6 shadow-2xl shadow-emerald-900/30 relative overflow-hidden">
+            {/* Decorative bg icon */}
+            <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-10">
+              <ClipboardList size={120} />
+            </div>
+            {/* Status badge */}
+            <div className="shrink-0 w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center">
+              <CheckCircle2 size={30} className="text-white" />
+            </div>
+            <div className="flex-1 relative z-10">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Section A Received</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">Under Review</span>
+              </div>
+              <h3 className="text-white font-black text-xl mb-1">Complete your application to speed up approval</h3>
+              <p className="text-emerald-200 text-sm leading-relaxed">
+                Your hotel identity (Section A) has been received. Fill in <strong className="text-white">Sections B – F</strong> below so our membership committee has everything they need to approve your application quickly.
+              </p>
+            </div>
+            <div className="shrink-0 relative z-10">
+              <a href="#section-b" className="flex items-center gap-2 bg-white text-emerald-700 font-black text-sm px-5 py-3 rounded-xl hover:bg-emerald-50 transition-colors shadow-lg">
+                Start Sections B–F <span aria-hidden>→</span>
+              </a>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-10">
           {/* STEP 1: Account Authentication (Visible only if not logged in) */}
@@ -428,49 +553,95 @@ const Register: React.FC = () => {
             </section>
           )}
 
-          {/* SECTION A: Hotel Information (Always visible or gated by auth) */}
-          <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
-            <div className="flex items-center mb-8 border-b border-slate-100 pb-4">
-              <Hotel className="text-emerald-600 mr-3" size={28} />
-              <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION A: Hotel Identity</h3>
-            </div>
+          {/* SECTION A: Hotel Identity — only visible once email is confirmed */}
+          {user && user.email_confirmed_at && (
+            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+              <div className="flex items-center mb-8 border-b border-slate-100 pb-4">
+                <Hotel className="text-emerald-600 mr-3" size={28} />
+                <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION A: Hotel Identity</h3>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-slate-600 mb-2">Hotel Name *</label>
-                <input required type="text" value={hotelName} onChange={(e) => setHotelName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-slate-600 mb-2">Address *</label>
-                <input required type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-600 mb-2">City/Town *</label>
-                <input required type="text" value={city} onChange={(e) => setCity(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-600 mb-2">District *</label>
-                <input required type="text" value={district} onChange={(e) => setDistrict(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-600 mb-2">Official Contact Number *</label>
-                <input required type="tel" value={contact} onChange={(e) => setContact(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-slate-600 mb-2">Website (If Any)</label>
-                <div className="relative">
-                  <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input type="url" placeholder="www.yourhotel.sl" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-slate-600 mb-2">Hotel Name *</label>
+                  <input required type="text" value={hotelName} onChange={(e) => setHotelName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-slate-600 mb-2">Address *</label>
+                  <input required type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 mb-2">City/Town *</label>
+                  <input required type="text" value={city} onChange={(e) => setCity(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-600 mb-2">District *</label>
+                  <input required type="text" value={district} onChange={(e) => setDistrict(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-slate-600 mb-2">Official Contact Number *</label>
+                  <div className="flex rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 bg-slate-50 transition-all">
+                    {/* Country code selector */}
+                    <select
+                      value={countryCode}
+                      onChange={(e) => {
+                        setCountryCode(e.target.value);
+                        setContact(e.target.value + ' ' + contactLocal);
+                      }}
+                      className="shrink-0 bg-slate-100 border-r border-slate-200 text-slate-700 font-bold text-sm px-3 py-3 outline-none cursor-pointer hover:bg-slate-200 transition-colors"
+                    >
+                      <option value="+232">🇸🇱 +232</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+33">🇫🇷 +33</option>
+                      <option value="+49">🇩🇪 +49</option>
+                      <option value="+234">🇳🇬 +234</option>
+                      <option value="+233">🇬🇭 +233</option>
+                      <option value="+225">🇨🇮 +225</option>
+                      <option value="+221">🇸🇳 +221</option>
+                      <option value="+224">🇬🇳 +224</option>
+                      <option value="+245">🇬🇼 +245</option>
+                      <option value="+231">🇱🇷 +231</option>
+                      <option value="+223">🇲🇱 +223</option>
+                      <option value="+226">🇧🇫 +226</option>
+                      <option value="+27">🇿🇦 +27</option>
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+86">🇨🇳 +86</option>
+                    </select>
+                    {/* Local number */}
+                    <input
+                      required
+                      type="tel"
+                      placeholder="e.g. 76 123456"
+                      value={contactLocal}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/[^0-9 \-]/g, '');
+                        setContactLocal(digits);
+                        setContact(countryCode + ' ' + digits);
+                      }}
+                      pattern="[0-9 \-]{5,15}"
+                      title="Enter between 5 and 15 digits (spaces and hyphens allowed)"
+                      className="flex-1 bg-transparent px-4 py-3 outline-none text-slate-800 placeholder-slate-400 text-sm"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1.5 font-medium">Digits only · 5–15 characters · e.g. {countryCode} 76 123456</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-slate-600 mb-2">Website (If Any)</label>
+                  <div className="relative">
+                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input type="text" placeholder="e.g. www.yourhotel.sl or https://yourhotel.sl" pattern="(https?:\/\/)?(www\.)?[a-zA-Z0-9\-]+(\.[a-zA-Z]{2,}).*" title="Enter a valid URL (e.g. www.hotel.sl, http://hotel.sl, https://hotel.sl)" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           {/* GATED SECTIONS B-F (Only for authenticated participants with approved or pending status) */}
           {userHotel?.status === 'approved' || userHotel?.status === 'pending' ? (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
               {/* SECTION B: Ownership & Management */}
-              <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+              <section id="section-b" className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
                 <div className="flex items-center mb-8 border-b border-slate-100 pb-4">
                   <ClipboardList className="text-emerald-600 mr-3" size={28} />
                   <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION B: Ownership & Management</h3>
@@ -563,9 +734,9 @@ const Register: React.FC = () => {
               <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
                 <div className="flex items-center mb-4 border-b border-slate-100 pb-4">
                   <Scale className="text-emerald-600 mr-3" size={28} />
-                  <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION D: Compliance & Documentation</h3>
+                  <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION D: Compliance &amp; Documentation</h3>
                 </div>
-                <p className="text-slate-500 text-sm mb-8 italic">Attach digital copies of your official certificates for verification.</p>
+                <p className="text-slate-400 text-xs mb-8 italic font-medium">Upload official PDF documents for verification. Accepted format: PDF only.</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
@@ -577,29 +748,45 @@ const Register: React.FC = () => {
                     <input required type="text" value={ntbLicense} onChange={(e) => setNtbLicense(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
                   </div>
 
-                  <div className="space-y-4">
-                    <label className="block text-sm font-bold text-slate-600">Certificate of Incorporation *</label>
-                    <div className="flex items-center space-x-4">
-                      <button type="button" onClick={() => document.getElementById('certIncorporation')?.click()} className="flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors font-bold text-sm">
-                        <UploadCloud size={16} />
-                        <span>{documentStatus.certIncorporation || userHotel?.documents?.certIncorporation ? 'Document Attached' : 'Attach Document'}</span>
-                      </button>
-                      <input type="file" id="certIncorporation" className="hidden" onChange={(e) => handleDocUpload(e, 'certIncorporation')} accept=".pdf,image/*" />
-                      {(documentStatus.certIncorporation || userHotel?.documents?.certIncorporation) && <CheckCircle2 size={16} className="text-emerald-500" />}
+                  {([
+                    { key: 'certIncorporation', label: 'Certificate of Incorporation' },
+                    { key: 'bizRegCert', label: 'Business Registration Certificate' },
+                    { key: 'ntbCert', label: 'NTB License Certificate' },
+                    { key: 'taxClearance', label: 'Tax Clearance Certificate' },
+                  ] as { key: string; label: string }[]).map(({ key, label }) => (
+                    <div key={key} className="space-y-2">
+                      <label className="block text-sm font-bold text-slate-600">{label}</label>
+                      <div className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${(documentStatus as any)[key] ? 'border-emerald-400 bg-emerald-50' : ((userHotel?.documents as any)?.[key] && !removedDocKeys.has(key)) ? 'border-slate-200 bg-slate-50' : 'border-dashed border-slate-200 bg-slate-50/50'}`}>
+                        <div className="flex items-center space-x-3 min-w-0">
+                          <div className={`p-2 rounded-lg shrink-0 ${(documentStatus as any)[key] || ((userHotel?.documents as any)?.[key] && !removedDocKeys.has(key)) ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                            <FileText size={18} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-700 truncate">
+                              {(documentStatus as any)[key] ? 'New file selected' : ((userHotel?.documents as any)?.[key] && !removedDocKeys.has(key)) ? 'Document uploaded' : 'No file selected'}
+                            </p>
+                            <p className="text-[10px] text-slate-400">PDF only</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 shrink-0 ml-2">
+                          {(userHotel?.documents as any)?.[key] && !removedDocKeys.has(key) && !(documentStatus as any)[key] && (
+                            <a href={(userHotel?.documents as any)[key]} target="_blank" rel="noopener noreferrer" className="p-2 bg-white border border-slate-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all" title="View document">
+                              <Eye size={14} />
+                            </a>
+                          )}
+                          {((documentStatus as any)[key] || ((userHotel?.documents as any)?.[key] && !removedDocKeys.has(key))) && (
+                            <button type="button" onClick={() => removeDocument(key)} className="p-2 bg-white border border-rose-200 text-rose-500 rounded-lg hover:bg-rose-50 transition-all" title="Remove document">
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                          <button type="button" onClick={() => document.getElementById(key)?.click()} className="flex items-center space-x-1 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all">
+                            <UploadCloud size={14} /><span>{(documentStatus as any)[key] || ((userHotel?.documents as any)?.[key] && !removedDocKeys.has(key)) ? 'Replace' : 'Upload'}</span>
+                          </button>
+                        </div>
+                      </div>
+                      <input type="file" id={key} className="hidden" accept=".pdf" onChange={(e) => handleDocUpload(e, key)} />
                     </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <label className="block text-sm font-bold text-slate-600">Business Registration Cert *</label>
-                    <div className="flex items-center space-x-4">
-                      <button type="button" onClick={() => document.getElementById('bizRegCert')?.click()} className="flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors font-bold text-sm">
-                        <UploadCloud size={16} />
-                        <span>{documentStatus.bizRegCert || userHotel?.documents?.bizRegCert ? 'Document Attached' : 'Attach Document'}</span>
-                      </button>
-                      <input type="file" id="bizRegCert" className="hidden" onChange={(e) => handleDocUpload(e, 'bizRegCert')} accept=".pdf,image/*" />
-                      {(documentStatus.bizRegCert || userHotel?.documents?.bizRegCert) && <CheckCircle2 size={16} className="text-emerald-500" />}
-                    </div>
-                  </div>
+                  ))}
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-slate-600 mb-2">Compliance Remarks</label>
@@ -623,25 +810,46 @@ const Register: React.FC = () => {
                     <label className="block text-sm font-bold text-slate-600 mb-2">Position *</label>
                     <input required type="text" value={signeePosition} onChange={(e) => setSigneePosition(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
                   </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-2">Date</label>
+                    <input type="date" value={signeeDate} onChange={(e) => setSigneeDate(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50" />
+                  </div>
                 </div>
               </section>
 
               {/* SECTION F: Gallery */}
               <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
-                <div className="flex items-center mb-8 border-b border-slate-100 pb-4">
-                  <ImageIcon className="text-emerald-600 mr-3" size={28} />
-                  <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION F: Media Gallery</h3>
+                <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
+                  <div className="flex items-center">
+                    <ImageIcon className="text-emerald-600 mr-3" size={28} />
+                    <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION F: Media Gallery</h3>
+                  </div>
+                  <span className={`text-xs font-black px-3 py-1 rounded-full ${(galleryImages.length + (userHotel?.gallery?.length || 0)) >= 10 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
+                    {galleryImages.length + (userHotel?.gallery?.length || 0)} / 10 photos
+                  </span>
                 </div>
+                {(galleryImages.length + (userHotel?.gallery?.length || 0)) === 0 && (
+                  <div className="py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100 flex flex-col items-center justify-center mb-6">
+                    <ImageIcon size={40} className="text-slate-200 mb-3" />
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No photos yet — add up to 10 images</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   {userHotel?.gallery?.map((img: string, idx: number) => (
-                    <div key={idx} className="aspect-square rounded-2xl overflow-hidden border border-slate-100 bg-slate-50">
+                    <div key={`existing-${idx}`} className="relative aspect-square rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 group">
                       <img src={img} alt="Gallery" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+                      <span className="absolute bottom-2 left-2 text-[8px] font-black bg-black/50 text-white px-2 py-0.5 rounded-full uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">Saved</span>
                     </div>
                   ))}
                   {galleryPreviews.map((img, idx) => (
-                    <div key={`new-${idx}`} className="relative aspect-square rounded-2xl overflow-hidden border border-emerald-100">
+                    <div key={`new-${idx}`} className="relative aspect-square rounded-2xl overflow-hidden border-2 border-emerald-200 group">
                       <img src={img} alt="New Preview" className="w-full h-full object-cover" />
-                      <button type="button" onClick={() => removeImage(idx)} className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full"><X size={12} /></button>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+                      <button type="button" onClick={() => removeImage(idx)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600">
+                        <X size={12} />
+                      </button>
+                      <span className="absolute bottom-2 left-2 text-[8px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">New</span>
                     </div>
                   ))}
                   {galleryImages.length + (userHotel?.gallery?.length || 0) < 10 && (
@@ -651,8 +859,9 @@ const Register: React.FC = () => {
                     </button>
                   )}
                 </div>
-                <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" multiple className="hidden" />
+                <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/webp,image/jpeg,image/jpg,image/png,.webp,.jpg,.jpeg,.png" multiple className="hidden" />
               </section>
+
             </div>
           ) : (
             <div className="bg-emerald-900 rounded-[2.5rem] p-10 md:p-16 text-center shadow-2xl relative overflow-hidden">
@@ -673,9 +882,21 @@ const Register: React.FC = () => {
             </div>
           )}
 
-          <button disabled={loading} type="submit" className="w-full bg-emerald-700 text-white py-6 rounded-3xl font-black text-xl shadow-2xl hover:bg-emerald-800 transition-all transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50">
+          {/* Submit button — label and visibility depend on auth + email-confirmation state */}
+          <button
+            disabled={loading}
+            type="submit"
+            className="w-full bg-emerald-700 text-white py-6 rounded-3xl font-black text-xl shadow-2xl hover:bg-emerald-800 transition-all transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50"
+          >
             {loading ? <Loader2 size={24} className="animate-spin mr-3" /> : <FileCheck size={24} className="mr-3" />}
-            {user ? (userHotel?.status === 'approved' ? 'Update Final Registration' : 'Submit for Review') : 'Create Account & Begin'}
+            {!user
+              ? 'Create Account & Begin'
+              : userHotel?.status === 'approved'
+                ? 'Update Final Registration'
+                : userHotel
+                  ? 'Submit for Review'
+                  : 'Submit Section A for Review'
+            }
           </button>
         </form>
       </div>
