@@ -183,9 +183,9 @@ END:VCALENDAR`;
               <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter flex items-center">
                 <Info className="mr-6 text-emerald-600" size={32} /> Overview
               </h2>
-              <div className="text-2xl text-slate-600 leading-relaxed font-light first-letter:text-7xl first-letter:font-black first-letter:text-emerald-700 first-letter:mr-3 first-letter:float-left">
-                {event.fullContent}
-              </div>
+              <div className="text-2xl text-slate-600 leading-relaxed font-light prose prose-lg max-w-none"
+                dangerouslySetInnerHTML={{ __html: event.fullContent || event.description || '' }}
+              />
             </div>
 
             {/* Agenda Section */}

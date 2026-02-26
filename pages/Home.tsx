@@ -6,12 +6,14 @@ import { useAppContext } from '../context/AppContext';
 import { ShieldCheck, TrendingUp, Users, Building2, ChevronRight, Calendar, ArrowRight, Globe } from 'lucide-react';
 
 const Home: React.FC = () => {
-  const { news, members, profiles, loading: appLoading } = useAppContext();
+  const { news, members, loading: appLoading } = useAppContext();
 
   const newsItems = news.slice(0, 3);
+  const approvedHotels = members.filter(h => h.status === 'approved');
+  const totalJobs = approvedHotels.reduce((sum, h) => sum + (Number(h.employees) || 0), 0);
   const stats = {
-    hotels: members.length || 120,
-    members: profiles.length || 5,
+    hotels: approvedHotels.length || members.length || 0,
+    jobs: totalJobs,
     impact: '4.5B'
   };
 
@@ -78,11 +80,13 @@ const Home: React.FC = () => {
         {/* Floating Stats - Hidden on Mobile */}
         <div className="hidden lg:flex absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 bg-white rounded-2xl shadow-2xl p-8 w-4/5 max-w-5xl justify-between items-center z-20">
           <div className="text-center px-8 border-r border-slate-100 last:border-0 flex-1">
-            <div className="text-3xl font-bold text-emerald-800">{stats.hotels}+</div>
+            <div className="text-3xl font-bold text-emerald-800">{stats.hotels > 0 ? `${stats.hotels}+` : '—'}</div>
             <div className="text-slate-500 text-sm uppercase font-semibold">Member Hotels</div>
           </div>
           <div className="text-center px-8 border-r border-slate-100 last:border-0 flex-1">
-            <div className="text-3xl font-bold text-emerald-800">{stats.members >= 1000 ? `${(stats.members / 1000).toFixed(1)}k+` : `${stats.members}+`}</div>
+            <div className="text-3xl font-bold text-emerald-800">
+              {stats.jobs >= 1000 ? `${(stats.jobs / 1000).toFixed(1)}k+` : stats.jobs > 0 ? `${stats.jobs}+` : '—'}
+            </div>
             <div className="text-slate-500 text-sm uppercase font-semibold">Jobs Represented</div>
           </div>
           <div className="text-center px-8 border-r border-slate-100 last:border-0 flex-1">

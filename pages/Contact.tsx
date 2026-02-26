@@ -51,16 +51,35 @@ const Contact: React.FC = () => {
             </div>
 
             <div className="bg-slate-900 p-10 rounded-3xl text-white">
-              <h3 className="text-2xl font-bold mb-4">Membership Inquiries</h3>
-              <p className="text-slate-400 mb-8">Ready to join our professional network? Access the official registration portal below.</p>
-              <Link to="/register" className="inline-block bg-amber-500 text-slate-950 px-8 py-3 rounded-xl font-bold hover:bg-amber-400 transition-all mb-8">
+              <h3 className="text-2xl font-bold mb-2">Contact Leadership</h3>
+              <p className="text-slate-400 mb-8 text-sm">Reach out directly to SLAH leadership for membership, policy, or partnership inquiries.</p>
+
+              <div className="space-y-5 mb-8">
+                <div className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl px-5 py-4">
+                  <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center font-black text-slate-900 shrink-0">JS</div>
+                  <div>
+                    <p className="font-bold text-white text-sm">John Shallop</p>
+                    <p className="text-emerald-400 text-xs font-bold uppercase tracking-widest">President, SLAH</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl px-5 py-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center font-black text-slate-200 shrink-0">LK</div>
+                  <div>
+                    <p className="font-bold text-white text-sm">Lonnel Kargbo</p>
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Secretary General, SLAH</p>
+                  </div>
+                </div>
+              </div>
+
+              <Link to="/register" className="inline-block bg-amber-500 text-slate-950 px-8 py-3 rounded-xl font-bold hover:bg-amber-400 transition-all mb-5 w-full text-center">
                 Official Registration Form
               </Link>
               <div className="flex items-center space-x-3 text-amber-500 font-bold">
                 <MessageSquare size={20} />
-                <span>WhatsApp: +232 76 555 444</span>
+                <span>secretariat@slahotels.org</span>
               </div>
             </div>
+
           </div>
 
           {/* Form */}

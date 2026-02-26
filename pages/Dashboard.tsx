@@ -2652,6 +2652,89 @@ const UserManagement = () => {
   );
 };
 
+// ─── Rich Text Editor ──────────────────────────────────────────────────────
+const RichTextEditor = ({ value, onChange }: { value: string; onChange: (html: string) => void }) => {
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  // Sync external value into editor only on mount / when form is reset
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value;
+    }
+  }, [value]);
+
+  const exec = (command: string, val?: string) => {
+    document.execCommand(command, false, val);
+    editorRef.current?.focus();
+  };
+
+  const handleInput = () => {
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+  };
+
+  const ToolBtn = ({
+    title, icon, cmd, cmdVal
+  }: { title: string; icon: React.ReactNode; cmd: string; cmdVal?: string }) => (
+    <button
+      type="button"
+      title={title}
+      onMouseDown={e => { e.preventDefault(); exec(cmd, cmdVal); }}
+      className="p-2 rounded-lg text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all flex items-center justify-center"
+    >
+      {icon}
+    </button>
+  );
+
+  return (
+    <div className="border border-slate-200 rounded-2xl overflow-hidden focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-400 transition-all bg-white">
+      {/* Toolbar */}
+      <div className="flex items-center flex-wrap gap-0.5 px-3 py-2 bg-slate-50 border-b border-slate-100">
+        <ToolBtn title="Bold" cmd="bold" icon={<span className="font-black text-sm w-5 text-center">B</span>} />
+        <ToolBtn title="Italic" cmd="italic" icon={<span className="italic text-sm w-5 text-center font-serif">I</span>} />
+        <ToolBtn title="Underline" cmd="underline" icon={<span className="underline text-sm w-5 text-center">U</span>} />
+        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <ToolBtn title="Heading 2" cmd="formatBlock" cmdVal="h2" icon={<span className="text-xs font-black w-6 text-center">H2</span>} />
+        <ToolBtn title="Heading 3" cmd="formatBlock" cmdVal="h3" icon={<span className="text-xs font-black w-6 text-center">H3</span>} />
+        <ToolBtn title="Paragraph" cmd="formatBlock" cmdVal="p" icon={<span className="text-xs font-black w-5 text-center">¶</span>} />
+        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <ToolBtn title="Bullet List" cmd="insertUnorderedList" icon={<span className="text-sm w-5 text-center">•≡</span>} />
+        <ToolBtn title="Numbered List" cmd="insertOrderedList" icon={<span className="text-sm w-5 text-center">1≡</span>} />
+        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <ToolBtn title="Undo" cmd="undo" icon={<span className="text-sm w-5 text-center">↩</span>} />
+        <ToolBtn title="Redo" cmd="redo" icon={<span className="text-sm w-5 text-center">↪</span>} />
+      </div>
+      {/* Editable area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        className="min-h-[180px] max-h-[420px] overflow-y-auto px-6 py-4 text-slate-700 text-sm leading-relaxed outline-none prose prose-sm max-w-none"
+        style={{
+          // Basic prose styles for the editable area
+          '--tw-prose-body': '#475569',
+        } as React.CSSProperties}
+        data-placeholder="Write a detailed description... (supports bold, italic, headings & lists)"
+      />
+      <style>{`
+        [contenteditable]:empty:before {
+          content: attr(data-placeholder);
+          color: #cbd5e1;
+          pointer-events: none;
+          display: block;
+        }
+        [contenteditable] h2 { font-size: 1.25rem; font-weight: 800; color: #1e293b; margin: 12px 0 6px; }
+        [contenteditable] h3 { font-size: 1.05rem; font-weight: 700; color: #334155; margin: 10px 0 4px; }
+        [contenteditable] p  { margin: 4px 0; }
+        [contenteditable] ul { padding-left: 1.5rem; list-style: disc; margin: 6px 0; }
+        [contenteditable] ol { padding-left: 1.5rem; list-style: decimal; margin: 6px 0; }
+        [contenteditable] li { margin: 2px 0; }
+      `}</style>
+    </div>
+  );
+};
+// ──────────────────────────────────────────────────────────────────────────────
+
 const EventsManagement = () => {
   const { user, events: contextEvents, refreshData, showNotification } = useAppContext();
   const isAdmin = user?.role === 'admin' || user?.role === 'super-admin';
@@ -2794,7 +2877,7 @@ const EventsManagement = () => {
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    const actionLabel = newStatus === 'Approved' ? 'Approve' : newStatus === 'Declined' ? 'Decline' : newStatus === 'Suspended' ? 'Suspend' : 'Update';
+    const actionLabel = newStatus === 'Published' ? 'Publish' : newStatus === 'Declined' ? 'Decline' : newStatus === 'Suspended' ? 'Suspend' : 'Update';
 
     askConfirm(
       `${actionLabel} Event?`,
@@ -2826,7 +2909,7 @@ const EventsManagement = () => {
   };
 
   const handlePublish = async (id: string) => {
-    handleStatusChange(id, 'Approved');
+    handleStatusChange(id, 'Published');
   };
 
   const handleEventImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2956,7 +3039,7 @@ const EventsManagement = () => {
       description: formEvent.description,
       full_content: formEvent.fullContent || formEvent.full_content || '',
       category: formEvent.category,
-      status: forcedStatus || (editingEventId ? formEvent.status : (isAdmin ? 'Approved' : 'Pending')),
+      status: forcedStatus || (editingEventId ? formEvent.status : (isAdmin ? 'Published' : 'Pending')),
       user_id: user?.id,
       image: finalImage,
       schedule: (formEvent.schedule || []).filter(s => s.date || s.time || (s.agenda && s.agenda.some((a: any) => a.time || a.activity))),
@@ -3046,7 +3129,10 @@ const EventsManagement = () => {
                 <h3 className="text-xl font-bold text-slate-900 flex items-center mb-6">
                   <Info className="mr-3 text-emerald-600" size={24} /> Event Overview
                 </h3>
-                <p className="text-slate-600 text-lg leading-relaxed whitespace-pre-wrap">{event.fullContent || event.description}</p>
+                <div
+                  className="text-slate-600 text-lg leading-relaxed prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: event.fullContent || event.description || '' }}
+                />
               </section>
 
               <section>
@@ -3217,7 +3303,10 @@ const EventsManagement = () => {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Full Content / Detailed Description</label>
-                <textarea required rows={6} value={formEvent.fullContent} onChange={e => setFormEvent({ ...formEvent, fullContent: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-medium resize-none" placeholder="Detailed goals, context, and information..."></textarea>
+                <RichTextEditor
+                  value={formEvent.fullContent}
+                  onChange={html => setFormEvent({ ...formEvent, fullContent: html })}
+                />
               </div>
             </div>
 
@@ -3407,149 +3496,191 @@ const EventsManagement = () => {
           </form>
         </div>
       ) : (
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-100">
-          <div className="p-4 md:p-8 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h2 className="text-lg md:text-xl font-bold text-slate-900">Event Management</h2>
-              <p className="text-slate-500 text-xs md:text-sm">Schedule and manage association events</p>
+        <>
+          {/* Admin: Pending Events Review Banner */}
+          {isAdmin && events.filter(e => e.status === 'Pending').length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 mb-2">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-amber-500 rounded-xl flex items-center justify-center">
+                  <AlertTriangle size={16} className="text-white" />
+                </div>
+                <div>
+                  <p className="font-black text-amber-900 text-sm uppercase tracking-widest">Events Awaiting Review</p>
+                  <p className="text-amber-700 text-xs">{events.filter(e => e.status === 'Pending').length} member event(s) need your approval before going live.</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {events.filter(e => e.status === 'Pending').map(event => (
+                  <div key={event.id} className="flex items-center justify-between bg-white rounded-2xl px-5 py-3 border border-amber-100">
+                    <div>
+                      <p className="font-bold text-slate-900 text-sm">{event.title}</p>
+                      <p className="text-xs text-slate-400">{event.date} · {event.location}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={e => { e.stopPropagation(); setViewingEvent(event); }}
+                        className="text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-widest px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-all"
+                      >Preview</button>
+                      <button
+                        onClick={e => { e.stopPropagation(); handleStatusChange(event.id, 'Published'); }}
+                        className="text-[10px] font-black text-white bg-emerald-600 hover:bg-emerald-700 uppercase tracking-widest px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
+                      ><CheckCircle size={12} /> Publish</button>
+                      <button
+                        onClick={e => { e.stopPropagation(); handleStatusChange(event.id, 'Declined'); }}
+                        className="text-[10px] font-black text-white bg-rose-500 hover:bg-rose-600 uppercase tracking-widest px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
+                      ><XCircle size={12} /> Decline</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <button onClick={() => setShowAddForm(true)} className="w-full sm:w-auto bg-emerald-600 text-white px-4 md:px-5 py-2 rounded-xl font-bold text-[10px] md:text-sm flex items-center justify-center hover:bg-emerald-700 shadow-lg">
-              <Plus size={16} className="mr-2" /> Add New Event
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[700px]">
-              <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-                <tr>
-                  <th className="px-4 md:px-8 py-4">Event Details</th>
-                  <th className="px-4 md:px-8 py-4">Schedule</th>
-                  <th className="px-4 md:px-8 py-4">Status</th>
-                  <th className="px-4 md:px-8 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {events.sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((event) => {
-                  const isPast = event.date < new Date().toISOString().split('T')[0];
-                  const isMultiDay = Array.isArray(event.schedule) && event.schedule.length > 1;
-                  const isDraft = event.status === 'Draft';
+          )}
 
-                  return (
-                    <tr
-                      key={event.id}
-                      className={`hover:bg-slate-50 transition-colors cursor-pointer group ${isDraft ? 'bg-amber-50/10' : ''}`}
-                      onClick={() => setViewingEvent(event)}
-                    >
-                      <td className="px-4 md:px-8 py-4 md:py-5">
-                        <div className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors text-sm">{event.title}</div>
-                        <div className="text-[9px] text-slate-400 uppercase font-black">{event.category}</div>
-                      </td>
-                      <td className="px-4 md:px-8 py-4 md:py-5 text-xs md:text-sm text-slate-600">
-                        <div className="font-bold">{event.date}</div>
-                        <div className="text-slate-400">{isMultiDay ? `${event.schedule.length} Days` : event.time}</div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex flex-col gap-1.5">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-center ${event.status === 'Approved' || event.status === 'Published' ? 'bg-emerald-100 text-emerald-700' :
-                            event.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                              'bg-rose-100 text-rose-700'
-                            }`}>
-                            {event.status}
-                          </span>
-                          {!isDraft && (
-                            <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest text-center border ${isPast ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white text-emerald-600 border-emerald-100'
-                              }`}>
-                              {isPast ? 'Past' : 'Upcoming'}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <div className="flex justify-end space-x-1" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => setViewingEvent(event)}
-                            title="View Details"
-                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                          >
-                            <Eye size={16} />
-                          </button>
-
-                          <button
-                            onClick={() => openEditForm(event)}
-                            title="Edit Event"
-                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                          >
-                            <Edit3 size={16} />
-                          </button>
-
-                          {isAdmin && event.status === 'Pending' && (
-                            <button
-                              onClick={() => handleStatusChange(event.id, 'Approved')}
-                              title="Approve Event"
-                              className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                            >
-                              <CheckCircle size={16} />
-                            </button>
-                          )}
-
-                          {isAdmin && event.status === 'Approved' && (
-                            <button
-                              onClick={() => handleStatusChange(event.id, 'Suspended')}
-                              title="Suspend Event"
-                              className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
-                            >
-                              <AlertTriangle size={16} />
-                            </button>
-                          )}
-
-                          {isAdmin && event.status === 'Pending' && (
-                            <button
-                              onClick={() => handleStatusChange(event.id, 'Declined')}
-                              title="Decline Event"
-                              className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                            >
-                              <XCircle size={16} />
-                            </button>
-                          )}
-
-                          {(isDraft || event.status === 'Published') && (
-                            <button
-                              onClick={() => handlePublish(event.id)}
-                              title="Publish Now"
-                              className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                            >
-                              <CheckCircle size={16} />
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => handleDuplicate(event)}
-                            title="Duplicate Event"
-                            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
-                          >
-                            <Copy size={16} />
-                          </button>
-
-                          <button
-                            onClick={() => handleDelete(event.id)}
-                            title="Delete Event"
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {events.length === 0 && (
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-100">
+            <div className="p-4 md:p-8 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-lg md:text-xl font-bold text-slate-900">Event Management</h2>
+                <p className="text-slate-500 text-xs md:text-sm">Schedule and manage association events</p>
+              </div>
+              <button onClick={() => setShowAddForm(true)} className="w-full sm:w-auto bg-emerald-600 text-white px-4 md:px-5 py-2 rounded-xl font-bold text-[10px] md:text-sm flex items-center justify-center hover:bg-emerald-700 shadow-lg">
+                <Plus size={16} className="mr-2" /> Add New Event
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left min-w-[700px]">
+                <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
                   <tr>
-                    <td colSpan={5} className="px-8 py-12 text-center text-slate-400 italic">No events created yet.</td>
+                    <th className="px-4 md:px-8 py-4">Event Details</th>
+                    <th className="px-4 md:px-8 py-4">Schedule</th>
+                    <th className="px-4 md:px-8 py-4">Status</th>
+                    <th className="px-4 md:px-8 py-4 text-right">Actions</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {events.sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((event) => {
+                    const isPast = event.date < new Date().toISOString().split('T')[0];
+                    const isMultiDay = Array.isArray(event.schedule) && event.schedule.length > 1;
+                    const isDraft = event.status === 'Draft';
+
+                    return (
+                      <tr
+                        key={event.id}
+                        className={`hover:bg-slate-50 transition-colors cursor-pointer group ${isDraft ? 'bg-amber-50/10' : ''}`}
+                        onClick={() => setViewingEvent(event)}
+                      >
+                        <td className="px-4 md:px-8 py-4 md:py-5">
+                          <div className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors text-sm">{event.title}</div>
+                          <div className="text-[9px] text-slate-400 uppercase font-black">{event.category}</div>
+                        </td>
+                        <td className="px-4 md:px-8 py-4 md:py-5 text-xs md:text-sm text-slate-600">
+                          <div className="font-bold">{event.date}</div>
+                          <div className="text-slate-400">{isMultiDay ? `${event.schedule.length} Days` : event.time}</div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex flex-col gap-1.5">
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-center ${event.status === 'Published' ? 'bg-emerald-100 text-emerald-700' :
+                              event.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
+                                event.status === 'Draft' ? 'bg-slate-100 text-slate-500' :
+                                  'bg-rose-100 text-rose-700'
+                              }`}>
+                              {event.status}
+                            </span>
+                            {!isDraft && (
+                              <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest text-center border ${isPast ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-white text-emerald-600 border-emerald-100'
+                                }`}>
+                                {isPast ? 'Past' : 'Upcoming'}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <div className="flex justify-end space-x-1" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => setViewingEvent(event)}
+                              title="View Details"
+                              className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                            >
+                              <Eye size={16} />
+                            </button>
+
+                            <button
+                              onClick={() => openEditForm(event)}
+                              title="Edit Event"
+                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                            >
+                              <Edit3 size={16} />
+                            </button>
+
+                            {isAdmin && event.status === 'Pending' && (
+                              <button
+                                onClick={() => handleStatusChange(event.id, 'Published')}
+                                title="Approve & Publish"
+                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                              >
+                                <CheckCircle size={16} />
+                              </button>
+                            )}
+
+                            {isAdmin && event.status === 'Published' && (
+                              <button
+                                onClick={() => handleStatusChange(event.id, 'Suspended')}
+                                title="Suspend Event"
+                                className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                              >
+                                <AlertTriangle size={16} />
+                              </button>
+                            )}
+
+                            {isAdmin && event.status === 'Pending' && (
+                              <button
+                                onClick={() => handleStatusChange(event.id, 'Declined')}
+                                title="Decline Event"
+                                className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                              >
+                                <XCircle size={16} />
+                              </button>
+                            )}
+
+                            {isAdmin && event.status === 'Draft' && (
+                              <button
+                                onClick={() => handlePublish(event.id)}
+                                title="Publish Now"
+                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                              >
+                                <CheckCircle size={16} />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => handleDuplicate(event)}
+                              title="Duplicate Event"
+                              className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                            >
+                              <Copy size={16} />
+                            </button>
+
+                            <button
+                              onClick={() => handleDelete(event.id)}
+                              title="Delete Event"
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {events.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-8 py-12 text-center text-slate-400 italic">No events created yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </>
       )}
       <ConfirmationModal
         isOpen={confirmModal.isOpen}
@@ -4784,12 +4915,564 @@ function SettingsView({ user }: { user: any }) {
   );
 };
 
+// ── Notification Dropdown Panel ─────────────────────────────────────────────
+
+function NotificationDropdown({ isAdmin, onClose }: { isAdmin: boolean; onClose: () => void }) {
+  const { hotels, userHotel, events, news, activities } = useAppContext();
+  const navigate = useNavigate();
+
+  // ── ADMIN PANEL ──────────────────────────────────────────────────────────
+  if (isAdmin) {
+    const pendingHotels = [...hotels]
+      .filter(h => h.status === 'pending')
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5);
+
+    return (
+      <>
+        <div className="fixed inset-0 z-40" onClick={onClose} />
+        <div className="absolute right-0 top-full mt-3 w-96 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <div>
+              <h3 className="font-black text-slate-900 text-sm uppercase tracking-widest">Notifications</h3>
+              <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold mt-0.5">Admin — Secretariat</p>
+            </div>
+            <button onClick={onClose} className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+              <X size={13} className="text-slate-500" />
+            </button>
+          </div>
+
+          {/* Pending Applications */}
+          <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
+            <Clock size={12} className="text-amber-600" />
+            <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest">
+              {pendingHotels.length > 0 ? `${pendingHotels.length} Pending Application${pendingHotels.length !== 1 ? 's' : ''}` : 'No Pending Applications'}
+            </p>
+          </div>
+
+          {pendingHotels.length > 0 ? (
+            <div className="divide-y divide-slate-50 max-h-56 overflow-y-auto">
+              {pendingHotels.map(hotel => (
+                <button
+                  key={hotel.id}
+                  onClick={() => { navigate(`/dashboard/applications/${hotel.id}`); onClose(); }}
+                  className="w-full flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors text-left group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                    <Clock size={14} className="text-amber-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-800 truncate group-hover:text-emerald-700 transition-colors">{hotel.hotel_name}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{hotel.district || hotel.region || 'Sierra Leone'} · New application</p>
+                    <p className="text-[9px] text-slate-300 mt-0.5">{new Date(hotel.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-300 group-hover:text-emerald-500 mt-1 shrink-0 transition-colors" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center">
+              <CheckCircle2 size={28} className="mx-auto mb-2 text-emerald-300" />
+              <p className="text-xs text-slate-400">All caught up!</p>
+            </div>
+          )}
+
+          {pendingHotels.length > 0 && (
+            <div className="px-5 py-3 border-t border-slate-100">
+              <button
+                onClick={() => { navigate('/dashboard/applications'); onClose(); }}
+                className="w-full text-center text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:text-emerald-800 transition-colors"
+              >
+                View All Applications →
+              </button>
+            </div>
+          )}
+
+          {/* Recent Activity */}
+          {activities.length > 0 && (
+            <>
+              <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
+                <History size={11} className="text-slate-400" />
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Recent Activity</p>
+              </div>
+              <div className="divide-y divide-slate-50 max-h-36 overflow-y-auto">
+                {activities.slice(0, 4).map((act, i) => (
+                  <div key={i} className="flex items-start gap-3 px-5 py-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-slate-600 leading-relaxed line-clamp-2">{act.text}</p>
+                      <p className="text-[9px] text-slate-300 mt-0.5">{new Date(act.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </>
+    );
+  }
+
+  // ── MEMBER PANEL ─────────────────────────────────────────────────────────
+  const statusConfig: Record<string, { icon: any; color: string; bg: string; border: string; label: string; sub: string }> = {
+    approved: {
+      icon: ShieldCheck, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-100',
+      label: 'Membership Active', sub: 'Your property is officially listed.'
+    },
+    pending: {
+      icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100',
+      label: 'Application Under Review', sub: 'Complete Sections B–F to speed up approval.'
+    },
+    rejected: {
+      icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100',
+      label: 'Action Required', sub: 'Please contact the Secretariat.'
+    },
+    suspended: {
+      icon: AlertTriangle, color: 'text-amber-700', bg: 'bg-amber-100', border: 'border-amber-200',
+      label: 'Membership Suspended', sub: 'Privileges are temporarily paused.'
+    },
+  };
+
+  const memberStatus = userHotel?.status;
+  const cfg = memberStatus ? statusConfig[memberStatus] : null;
+  const upcomingEvents = events.filter(e => new Date(e.date) >= new Date()).slice(0, 2);
+  const latestNews = news.slice(0, 2);
+  const hasContent = cfg || upcomingEvents.length > 0 || latestNews.length > 0;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="absolute right-0 top-full mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div>
+            <h3 className="font-black text-slate-900 text-sm uppercase tracking-widest">Notifications</h3>
+            <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold mt-0.5">Member Updates</p>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+            <X size={13} className="text-slate-500" />
+          </button>
+        </div>
+
+        {/* Application Status Card */}
+        {cfg && (
+          <div className={`${cfg.bg} ${cfg.border} border-b px-5 py-4`}>
+            <div className="flex items-start gap-3">
+              <cfg.icon size={18} className={`${cfg.color} mt-0.5 shrink-0`} />
+              <div className="flex-1">
+                <p className={`text-xs font-black ${cfg.color}`}>{cfg.label}</p>
+                <p className="text-slate-600 font-bold text-[10px] mt-0.5">{userHotel?.hotel_name}</p>
+                <p className="text-slate-400 text-[9px] mt-0.5">{cfg.sub}</p>
+              </div>
+            </div>
+            {memberStatus === 'pending' && (
+              <button
+                onClick={() => { navigate('/register'); onClose(); }}
+                className="mt-3 w-full bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-black py-2 rounded-xl transition-colors uppercase tracking-widest"
+              >
+                Complete Sections B–F →
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Upcoming Events */}
+        {upcomingEvents.length > 0 && (
+          <>
+            <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+              <Calendar size={11} className="text-slate-400" />
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Upcoming Events</p>
+            </div>
+            <div className="divide-y divide-slate-50">
+              {upcomingEvents.map(evt => (
+                <button
+                  key={evt.id}
+                  onClick={() => { navigate('/dashboard/events'); onClose(); }}
+                  className="w-full flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors text-left group"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+                    <Calendar size={12} className="text-indigo-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-700 truncate group-hover:text-indigo-600 transition-colors">{evt.title}</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">{new Date(evt.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Latest News */}
+        {latestNews.length > 0 && (
+          <>
+            <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
+              <Newspaper size={11} className="text-slate-400" />
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Latest News</p>
+            </div>
+            <div className="divide-y divide-slate-50">
+              {latestNews.map(article => (
+                <button
+                  key={article.id}
+                  onClick={() => { navigate(`/news/${article.id}`); onClose(); }}
+                  className="w-full flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors text-left group"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                    <Newspaper size={12} className="text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-700 line-clamp-2 group-hover:text-emerald-700 transition-colors">{article.title}</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">{new Date(article.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {!hasContent && (
+          <div className="py-10 text-center">
+            <Bell size={28} className="mx-auto mb-2 text-slate-200" />
+            <p className="text-xs text-slate-400">No notifications at this time.</p>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ── Notifications Full Page ───────────────────────────────────────────────
+
+const NotificationsView = ({ user }: { user: any }) => {
+  const { hotels, userHotel, events, news, activities, newApplicationCount } = useAppContext();
+  const navigate = useNavigate();
+  const isAdmin = user?.role === 'admin' || user?.role === 'super-admin';
+
+  // ── ADMIN VIEW ─────────────────────────────────────────────────────────────────
+  if (isAdmin) {
+    const pendingHotels = [...hotels]
+      .filter(h => h.status === 'pending')
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const recentHotels = [...hotels]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5);
+
+    return (
+      <div className="space-y-8 max-w-5xl">
+        {/* Page header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Notifications</h2>
+            <p className="text-slate-400 text-xs font-medium mt-1">Admin &mdash; Secretariat updates and alerts</p>
+          </div>
+          {newApplicationCount > 0 && (
+            <span className="flex items-center gap-2 px-4 py-2 bg-rose-50 border border-rose-200 text-rose-600 rounded-full text-xs font-black uppercase tracking-widest animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              {newApplicationCount} New
+            </span>
+          )}
+        </div>
+
+        {/* Pending Applications */}
+        <div className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
+                <Clock size={16} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest">Pending Applications</h3>
+                <p className="text-[10px] text-slate-400 font-medium">Awaiting secretariat review</p>
+              </div>
+            </div>
+            <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-black rounded-full uppercase tracking-widest">
+              {pendingHotels.length} Pending
+            </span>
+          </div>
+
+          {pendingHotels.length > 0 ? (
+            <div className="divide-y divide-slate-50">
+              {pendingHotels.map(hotel => (
+                <button
+                  key={hotel.id}
+                  onClick={() => navigate(`/dashboard/applications/${hotel.id}`)}
+                  className="w-full flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors text-left group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 font-black text-sm text-slate-500">
+                    {(hotel.hotel_name || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 transition-colors truncate">{hotel.hotel_name}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{hotel.district || hotel.region || 'Sierra Leone'} &bull; {hotel.stars ? `${hotel.stars}-star` : 'Unrated'}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[9px] text-slate-300">{new Date(hotel.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded-full uppercase tracking-widest">
+                      <Clock size={8} /> Pending
+                    </span>
+                  </div>
+                  <ChevronRight size={16} className="text-slate-200 group-hover:text-emerald-500 transition-colors shrink-0" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center">
+              <CheckCircle2 size={36} className="mx-auto mb-3 text-emerald-200" />
+              <p className="text-sm font-bold text-slate-400">All applications reviewed</p>
+              <p className="text-xs text-slate-300 mt-1">No pending applications at this time.</p>
+            </div>
+          )}
+
+          {pendingHotels.length > 0 && (
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50">
+              <button
+                onClick={() => navigate('/dashboard/applications')}
+                className="text-[11px] font-black text-emerald-600 uppercase tracking-widest hover:text-emerald-800 transition-colors"
+              >
+                Manage All Applications →
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Recent Submissions (all statuses) */}
+        <div className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
+            <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center">
+              <FileText size={16} className="text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest">Recent Submissions</h3>
+              <p className="text-[10px] text-slate-400 font-medium">Last 5 hotel registrations across all statuses</p>
+            </div>
+          </div>
+          <div className="divide-y divide-slate-50">
+            {recentHotels.map(hotel => {
+              const statusMap: Record<string, { color: string; bg: string; label: string }> = {
+                approved: { color: 'text-emerald-700', bg: 'bg-emerald-100', label: 'Approved' },
+                pending: { color: 'text-amber-700', bg: 'bg-amber-100', label: 'Pending' },
+                rejected: { color: 'text-rose-700', bg: 'bg-rose-100', label: 'Rejected' },
+                suspended: { color: 'text-slate-600', bg: 'bg-slate-100', label: 'Suspended' },
+              };
+              const st = statusMap[hotel.status] || statusMap.pending;
+              return (
+                <button
+                  key={hotel.id}
+                  onClick={() => navigate(`/dashboard/applications/${hotel.id}`)}
+                  className="w-full flex items-center gap-4 px-6 py-3.5 hover:bg-slate-50 transition-colors text-left group"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-700 group-hover:text-emerald-700 transition-colors truncate">{hotel.hotel_name}</p>
+                    <p className="text-[9px] text-slate-400">{new Date(hotel.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  </div>
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${st.bg} ${st.color}`}>{st.label}</span>
+                  <ChevronRight size={14} className="text-slate-200 group-hover:text-emerald-500 transition-colors shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Activity Log */}
+        <div className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
+            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
+              <History size={16} className="text-slate-500" />
+            </div>
+            <div>
+              <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest">Activity Log</h3>
+              <p className="text-[10px] text-slate-400 font-medium">Recent actions across the platform</p>
+            </div>
+          </div>
+          {activities.length > 0 ? (
+            <div className="divide-y divide-slate-50 max-h-96 overflow-y-auto">
+              {activities.map((act, i) => (
+                <div key={i} className="flex items-start gap-4 px-6 py-3.5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-600 leading-relaxed">{act.text}</p>
+                    <p className="text-[9px] text-slate-300 mt-0.5">{new Date(act.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center">
+              <History size={36} className="mx-auto mb-3 text-slate-100" />
+              <p className="text-sm text-slate-400">No activity recorded yet.</p>
+            </div>
+          )}
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50">
+            <button
+              onClick={() => navigate('/dashboard/logs')}
+              className="text-[11px] font-black text-emerald-600 uppercase tracking-widest hover:text-emerald-800 transition-colors"
+            >
+              View Full Audit Log →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── MEMBER VIEW ────────────────────────────────────────────────────────────────
+  const statusMeta: Record<string, { icon: any; color: string; bg: string; border: string; ring: string; title: string; body: string }> = {
+    approved: {
+      icon: ShieldCheck, color: 'text-emerald-700', bg: 'bg-emerald-50',
+      border: 'border-emerald-200', ring: 'ring-emerald-100',
+      title: 'Membership Active', body: 'Your property is officially listed with SLAH. Welcome to the association!'
+    },
+    pending: {
+      icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50',
+      border: 'border-amber-200', ring: 'ring-amber-100',
+      title: 'Application Under Review', body: 'Your application is being reviewed by the Secretariat. Complete Sections B–F to speed things up.'
+    },
+    rejected: {
+      icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50',
+      border: 'border-rose-200', ring: 'ring-rose-100',
+      title: 'Application Needs Attention', body: 'Your application requires additional action. Please contact the SLAH Secretariat for guidance.'
+    },
+    suspended: {
+      icon: AlertTriangle, color: 'text-amber-700', bg: 'bg-amber-100',
+      border: 'border-amber-300', ring: 'ring-amber-200',
+      title: 'Membership Suspended', body: 'Your membership privileges have been temporarily paused. Contact the Secretariat for assistance.'
+    },
+  };
+
+  const memberStatus = userHotel?.status || null;
+  const sm = memberStatus ? statusMeta[memberStatus] : null;
+  const futureEvents = events.filter(e => new Date(e.date) >= new Date());
+  const allNews = news;
+
+  return (
+    <div className="space-y-8 max-w-3xl">
+      {/* Page header */}
+      <div>
+        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Notifications</h2>
+        <p className="text-slate-400 text-xs font-medium mt-1">Your membership updates, events and news</p>
+      </div>
+
+      {/* Application Status card */}
+      {sm ? (
+        <div className={`relative rounded-[1.5rem] border-2 ${sm.border} ${sm.bg} p-6 shadow-sm ring-4 ${sm.ring}`}>
+          <div className="flex items-start gap-4">
+            <div className={`w-12 h-12 rounded-2xl ${sm.bg} border ${sm.border} flex items-center justify-center shrink-0`}>
+              <sm.icon size={22} className={sm.color} />
+            </div>
+            <div className="flex-1">
+              <p className={`text-xs font-black uppercase tracking-widest ${sm.color}`}>Application Status</p>
+              <h3 className="text-lg font-black text-slate-900 mt-0.5">{sm.title}</h3>
+              <p className="text-slate-500 text-[11px] font-medium mt-1 leading-relaxed">{sm.body}</p>
+              {userHotel?.hotel_name && (
+                <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-widest">{userHotel.hotel_name}</p>
+              )}
+            </div>
+          </div>
+          {memberStatus === 'pending' && (
+            <button
+              onClick={() => navigate('/register')}
+              className="mt-4 w-full bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs py-3 rounded-xl transition-colors uppercase tracking-widest shadow-sm"
+            >
+              Complete Sections B–F →
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-[1.5rem] border-2 border-dashed border-slate-200 bg-white p-8 text-center">
+          <Bell size={32} className="mx-auto mb-3 text-slate-200" />
+          <p className="text-sm font-bold text-slate-400">No membership application found</p>
+          <button
+            onClick={() => navigate('/register')}
+            className="mt-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black py-2 px-5 rounded-xl transition-colors uppercase tracking-widest"
+          >
+            Start your Application
+          </button>
+        </div>
+      )}
+
+      {/* Upcoming Events */}
+      <div className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center">
+              <Calendar size={16} className="text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest">Upcoming Events</h3>
+              <p className="text-[10px] text-slate-400 font-medium">SLAH association events</p>
+            </div>
+          </div>
+          <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full uppercase tracking-widest">{futureEvents.length} Upcoming</span>
+        </div>
+        {futureEvents.length > 0 ? (
+          <div className="divide-y divide-slate-50">
+            {futureEvents.map(evt => (
+              <div key={evt.id} className="flex items-start gap-4 px-6 py-4">
+                <div className="w-12 text-center shrink-0">
+                  <p className="text-lg font-black text-indigo-700 leading-none">{new Date(evt.date).getDate()}</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{new Date(evt.date).toLocaleDateString('en-GB', { month: 'short' })}</p>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-700 truncate">{evt.title}</p>
+                  {evt.location && <p className="text-[10px] text-slate-400 mt-0.5">{evt.location}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-10 text-center">
+            <Calendar size={32} className="mx-auto mb-2 text-slate-100" />
+            <p className="text-xs text-slate-400">No upcoming events at this time.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Latest News */}
+      <div className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
+          <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
+            <Newspaper size={16} className="text-emerald-600" />
+          </div>
+          <div>
+            <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest">Latest News</h3>
+            <p className="text-[10px] text-slate-400 font-medium">Updates from the association</p>
+          </div>
+        </div>
+        {allNews.length > 0 ? (
+          <div className="divide-y divide-slate-50">
+            {allNews.map(article => (
+              <button
+                key={article.id}
+                onClick={() => navigate(`/news/${article.id}`)}
+                className="w-full flex items-start gap-4 px-6 py-4 hover:bg-slate-50 transition-colors text-left group"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-700 group-hover:text-emerald-700 transition-colors line-clamp-2">{article.title}</p>
+                  <p className="text-[9px] text-slate-400 mt-1">{new Date(article.date || article.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                </div>
+                <ChevronRight size={16} className="text-slate-200 group-hover:text-emerald-500 transition-colors shrink-0 mt-1" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="py-10 text-center">
+            <Newspaper size={32} className="mx-auto mb-2 text-slate-100" />
+            <p className="text-xs text-slate-400">No news articles yet.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // --- Main Dashboard Component ---
 
 export default function Dashboard() {
   const { user, refreshData, newApplicationCount, clearNewApplicationCount } = useAppContext();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -4832,6 +5515,12 @@ export default function Dashboard() {
     { name: 'Events', path: '/dashboard/events', icon: <Calendar size={20} />, roles: ['super-admin', 'admin', 'member'] },
     { name: 'News', path: '/dashboard/news', icon: <Newspaper size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Users', path: '/dashboard/users', icon: <Users size={20} />, roles: ['super-admin', 'admin'] },
+    {
+      name: 'Notifications', path: '/dashboard/notifications',
+      icon: <Bell size={20} />,
+      roles: ['super-admin', 'admin', 'member'],
+      badge: isAdmin && newApplicationCount > 0 ? newApplicationCount : 0
+    },
     { name: 'Logs', path: '/dashboard/logs', icon: <History size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Settings', path: '/dashboard/settings', icon: <Settings size={20} />, roles: ['super-admin', 'admin', 'member'] },
   ].filter(item => item.roles.includes(user.role));
@@ -4911,20 +5600,32 @@ export default function Dashboard() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input type="text" placeholder="Quick search..." className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500 w-64 transition-all" />
             </div>
-            <button
-              className="p-2 text-slate-400 hover:text-emerald-600 relative transition-colors"
-              onClick={() => { navigate('/dashboard/applications'); clearNewApplicationCount(); }}
-              title={isAdmin && newApplicationCount > 0 ? `${newApplicationCount} new application${newApplicationCount !== 1 ? 's' : ''}` : 'Notifications'}
-            >
-              <Bell size={20} />
-              {isAdmin && newApplicationCount > 0 ? (
-                <span className="absolute top-1 right-1 min-w-[16px] h-[16px] bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 border-2 border-white animate-bounce">
-                  {newApplicationCount > 9 ? '9+' : newApplicationCount}
-                </span>
-              ) : (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+            {/* Bell notification button */}
+            <div className="relative">
+              <button
+                className="p-2 text-slate-400 hover:text-emerald-600 relative transition-colors"
+                onClick={() => {
+                  setShowNotificationPanel(prev => !prev);
+                  if (isAdmin) clearNewApplicationCount();
+                }}
+                title={isAdmin && newApplicationCount > 0 ? `${newApplicationCount} new application${newApplicationCount !== 1 ? 's' : ''}` : 'Notifications'}
+              >
+                <Bell size={20} />
+                {isAdmin && newApplicationCount > 0 ? (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-[16px] bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 border-2 border-white animate-bounce">
+                    {newApplicationCount > 9 ? '9+' : newApplicationCount}
+                  </span>
+                ) : isAdmin ? (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+                ) : null}
+              </button>
+              {showNotificationPanel && (
+                <NotificationDropdown
+                  isAdmin={isAdmin}
+                  onClose={() => setShowNotificationPanel(false)}
+                />
               )}
-            </button>
+            </div>
             <div className="h-8 w-px bg-slate-100 mx-2"></div>
             <div className="flex items-center space-x-3">
               <div className="text-right hidden sm:block">
@@ -5025,6 +5726,7 @@ export default function Dashboard() {
             <Route path="/users" element={<UserManagement />} />
             <Route path="/logs" element={<ActivityLogs />} />
             <Route path="/profile" element={<ProfileEdit user={user} />} />
+            <Route path="/notifications" element={<NotificationsView user={user} />} />
             <Route path="/settings" element={<SettingsView user={user} />} />
             <Route path="*" element={
               <div className="flex flex-col items-center justify-center h-full text-slate-400 py-20">
