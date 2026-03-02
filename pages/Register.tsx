@@ -89,9 +89,32 @@ const Register: React.FC = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [activeStep, setActiveStep] = useState(1);
 
+  // Anti-Spam state
+  const [honeypot, setHoneypot] = useState('');
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  const [captchaNums, setCaptchaNums] = useState({ num1: 0, num2: 0 });
+
+  useEffect(() => {
+    setCaptchaNums({
+      num1: Math.floor(Math.random() * 10) + 1,
+      num2: Math.floor(Math.random() * 10) + 1
+    });
+  }, []);
+
   // Validate required fields and return true if valid
   const validate = (): boolean => {
     const newErrors: { [key: string]: string } = {};
+
+    // Anti-spam validation
+    if (honeypot) {
+      return false; // Silently fail for bots
+    }
+    if (parseInt(captchaAnswer) !== captchaNums.num1 + captchaNums.num2) {
+      newErrors.captcha = 'Incorrect math answer. Please try again.';
+      setCaptchaNums({ num1: Math.floor(Math.random() * 10) + 1, num2: Math.floor(Math.random() * 10) + 1 });
+      setCaptchaAnswer('');
+    }
+
     // Account fields (only for new users)
     if (!user) {
       if (!fullName.trim()) newErrors.fullName = 'Full name is required.';
@@ -910,6 +933,38 @@ const Register: React.FC = () => {
             </section>
 
           </div>
+
+          {/* ANTI-SPAM: Honeypot (Hidden) */}
+          <div className="hidden" aria-hidden="true" style={{ display: 'none' }}>
+            <label>Leave this field blank if you are human</label>
+            <input type="text" name="work_fax" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
+          </div>
+
+          {/* ANTI-SPAM: Math CAPTCHA */}
+          <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200" id="field-captcha">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-1 text-center md:text-left">
+                <h4 className="font-bold text-slate-800 mb-1 flex items-center justify-center md:justify-start"><ShieldCheck size={20} className="text-emerald-600 mr-2" /> Security Check</h4>
+                <p className="text-sm text-slate-500">Please solve this simple math problem to prove you are human before submitting.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl font-black text-slate-700 bg-slate-50 px-5 py-3 rounded-2xl border border-slate-200 shadow-sm">
+                  {captchaNums.num1} + {captchaNums.num2} =
+                </span>
+                <input
+                  type="number"
+                  required
+                  value={captchaAnswer}
+                  onChange={(e) => {
+                    setCaptchaAnswer(e.target.value);
+                    if (e.target.value) setErrors(prev => ({ ...prev, captcha: '' }));
+                  }}
+                  className={`w-28 px-4 py-3 text-xl font-bold text-center rounded-2xl border-2 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all ${errors.captcha ? 'border-rose-400 bg-rose-50 text-rose-700' : 'border-slate-200 bg-white'}`}
+                />
+              </div>
+            </div>
+            {errors.captcha && <p className="text-rose-500 text-sm mt-4 font-bold text-center md:text-right">{errors.captcha}</p>}
+          </section>
 
           {/* Submit button — label and visibility depend on auth + email-confirmation state */}
           <button

@@ -46,8 +46,8 @@ const Home: React.FC = () => {
       <section className="relative h-screen min-h-[600px] flex items-center">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=2000"
-            alt="Luxury Hotel in Sierra Leone"
+            src="/home-banner.jpg"
+            alt="Sierra Leone Beach and Hospitality"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/90 to-slate-900/40"></div>
@@ -107,7 +107,7 @@ const Home: React.FC = () => {
             <div className="relative">
               <div className="absolute -top-6 -left-6 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl"></div>
               <img
-                src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1000"
+                src="/Hotel Staff.jpg"
                 alt="Hotel Staff"
                 className="rounded-2xl shadow-2xl relative z-10"
               />
