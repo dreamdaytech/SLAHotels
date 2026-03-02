@@ -1,9 +1,0 @@
-SLAHotels v2 (Not for development)
-
-This version is direct, with no email verification.
-- Members go to the registration form, fill out the registration form, and submit.
-- Once they fill the registration form and the login form and submit, they are automatically logged in
-- Members can login to the dashboard to make edits to their application 
-- Both the "Official Hotel Registration Form" and the "registration" should be on the same page. 
-
-
