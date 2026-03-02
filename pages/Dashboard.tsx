@@ -351,7 +351,7 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
                 <p className="text-xl font-black text-slate-900 tracking-tight">{app.tin}</p>
               </div>
               <div>
-                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">NTB License Number</label>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">National Tourist Board License Number</label>
                 <p className="text-xl font-black text-slate-900 tracking-tight">{app.ntbLicense}</p>
               </div>
             </div>
@@ -364,7 +364,7 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
                     const docLabels: Record<string, string> = {
                       certIncorporation: 'Certificate of Incorporation',
                       bizRegCert: 'Business Registration Certificate',
-                      ntbCert: 'NTB License Certificate',
+                      ntbCert: 'National Tourist Board License Certificate',
                       taxClearance: 'Tax Clearance Certificate',
                     };
                     const label = docLabels[key] || key.replace(/([A-Z])/g, ' $1').trim();
@@ -885,7 +885,7 @@ const ApplicationDetail = () => {
                     const labels: Record<string, string> = {
                       certIncorporation: 'Certificate of Incorporation',
                       bizRegCert: 'Business Registration',
-                      ntbCert: 'NTB License Certificate',
+                      ntbCert: 'National Tourist Board License Certificate',
                       taxClearance: 'Tax Clearance Certificate',
                     };
                     const label = labels[key] || key.replace(/([A-Z])/g, ' $1').trim();
@@ -4129,8 +4129,11 @@ const ProfileEdit = ({ user }: { user: any }) => {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
+  const [hotelEmail, setHotelEmail] = useState('');
   const [email, setEmail] = useState('');
   const [contact, setContact] = useState('');
+  const [countryCode, setCountryCode] = useState('+232');
+  const [contactLocal, setContactLocal] = useState('');
   const [website, setWebsite] = useState('');
 
   // Section B: Ownership
@@ -4175,8 +4178,18 @@ const ProfileEdit = ({ user }: { user: any }) => {
     setAddress(hotel.address || '');
     setCity(hotel.city || '');
     setDistrict(hotel.district || '');
+    setHotelEmail(hotel.email || '');
     setEmail(hotel.email || '');
-    setContact(hotel.contact || '');
+    // Parse stored contact into country code + local parts
+    const storedContact = hotel.contact || '';
+    const ccMatch = storedContact.match(/^(\+\d+)\s*(.*)$/);
+    if (ccMatch) {
+      setCountryCode(ccMatch[1]);
+      setContactLocal(ccMatch[2]);
+    } else {
+      setContactLocal(storedContact);
+    }
+    setContact(storedContact)
     setWebsite(hotel.website || '');
     setOwner(hotel.owner || '');
     setManager(hotel.manager || '');
@@ -4290,7 +4303,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
 
       const payload = {
         hotel_name: hotelName,
-        address, city, district, email, contact, website,
+        address, city, district, email: hotelEmail || email, contact, website,
         owner, manager, reg_number: regNumber,
         year_established: year ? parseInt(year) : null,
         employees: employees ? parseInt(employees) : null,
@@ -4391,151 +4404,154 @@ const ProfileEdit = ({ user }: { user: any }) => {
             <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Hotel Name *</label><input required type="text" value={hotelName} onChange={(e) => setHotelName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
             <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Address *</label><input required type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
             <div><label className="block text-sm font-bold text-slate-600 mb-2">City/Town *</label><input required type="text" value={city} onChange={(e) => setCity(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-            <div><label className="block text-sm font-bold text-slate-600 mb-2">District *</label><input required type="text" value={district} onChange={(e) => setDistrict(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-            <div><label className="block text-sm font-bold text-slate-600 mb-2">Official Contact Number *</label><input required type="tel" value={contact} onChange={(e) => setContact(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div>
+              <label className="block text-sm font-bold text-slate-600 mb-2">District *</label>
+              <select required value={district} onChange={(e) => setDistrict(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50">
+                <option value="">— Select District —</option>
+                {['Western Area Urban', 'Western Area Rural', 'Bo', 'Bonthe', 'Bombali', 'Falaba', 'Kailahun', 'Kambia', 'Karene', 'Kenema', 'Koinadugu', 'Kono', 'Moyamba', 'Port Loko', 'Pujehun', 'Tonkolili'].map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-bold text-slate-600 mb-2">Official Contact Number *</label>
+              <div className="flex rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 bg-slate-50">
+                <select value={countryCode} onChange={(e) => { setCountryCode(e.target.value); setContact(e.target.value + ' ' + contactLocal); }} className="shrink-0 bg-slate-100 border-r border-slate-200 text-slate-700 font-bold text-sm px-3 py-3 outline-none">
+                  {['+232', '+1', '+44', '+33', '+49', '+234', '+233', '+225', '+221', '+224', '+231', '+27', '+91', '+86'].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <input required type="tel" placeholder="76 123456" value={contactLocal} onChange={(e) => { const d = e.target.value.replace(/[^0-9 \-]/g, ''); setContactLocal(d); setContact(countryCode + ' ' + d); }} className="flex-1 bg-transparent px-4 py-3 outline-none text-sm" />
+              </div>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-bold text-slate-600 mb-2">Hotel Public Contact Email</label>
+              <div className="relative">
+                <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input type="email" placeholder="e.g. info@yourhotel.sl" value={hotelEmail} onChange={(e) => setHotelEmail(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 font-medium">Public-facing contact email for your hotel listing.</p>
+            </div>
             <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Website (If Any)</label><div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="url" placeholder="www.yourhotel.sl" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div></div>
           </div>
         </section>
 
-        {status === 'approved' || status === 'pending' ? (
-          <>
-            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
-              <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><ClipboardList className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION B: Ownership & Management</h3></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Owner/Proprietor Name *</label><input required type="text" value={owner} onChange={(e) => setOwner(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-                <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Managing Director / GM *</label><input required type="text" value={manager} onChange={(e) => setManager(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-                <div><label className="block text-sm font-bold text-slate-600 mb-2">Business Registration Number *</label><input required type="text" value={regNumber} onChange={(e) => setRegNumber(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-                <div><label className="block text-sm font-bold text-slate-600 mb-2">Year Established *</label><input required type="number" value={year} onChange={(e) => setYear(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-                <div><label className="block text-sm font-bold text-slate-600 mb-2">Total Number of Employees *</label><input required type="number" value={employees} onChange={(e) => setEmployees(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-              </div>
-            </section>
+        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+          <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><ClipboardList className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION B: Ownership &amp; Management</h3></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Owner/Proprietor Name *</label><input required type="text" value={owner} onChange={(e) => setOwner(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Managing Director / GM *</label><input required type="text" value={manager} onChange={(e) => setManager(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">Business Registration Number *</label><input required type="text" value={regNumber} onChange={(e) => setRegNumber(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">Year Established *</label><input required type="number" value={year} onChange={(e) => setYear(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">Total Number of Employees *</label><input required type="number" value={employees} onChange={(e) => setEmployees(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+          </div>
+        </section>
 
-            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
-              <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><Star className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION C: Facilities & Classification</h3></div>
-              <div className="space-y-8">
-                <div><label className="block text-sm font-bold text-slate-600 mb-4">Hotel Classification (★ rating) *</label><div className="flex gap-4">{[1, 2, 3, 4, 5].map(s => (<label key={s} className="flex items-center space-x-2 cursor-pointer"><input type="radio" checked={stars === s} onChange={() => setStars(s)} className="w-5 h-5 accent-amber-500" /><span>{s} ★</span></label>))}</div></div>
-                <div className="w-1/3"><label className="block text-sm font-bold text-slate-600 mb-2">Total Guest Rooms *</label><input required type="number" value={rooms} onChange={(e) => setRooms(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-                <div><label className="block text-sm font-bold text-slate-600 mb-4">Room Types Available</label><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{['Single', 'Double', 'Suite', 'Deluxe'].map(t => (<label key={t} className="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl cursor-pointer"><input type="checkbox" checked={roomTypes.includes(t)} onChange={() => toggleRoomType(t)} className="w-5 h-5 accent-emerald-600" /><span>{t}</span></label>))}</div></div>
-                <div><label className="block text-sm font-bold text-slate-600 mb-4">In-House Facilities</label><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{['Restaurant', 'Bar', 'Pool', 'Conference Room', 'Spa', 'Wi-Fi', 'Gym', 'Laundry', 'Beachfront', 'Airport Shuttle', 'Security'].map(f => (<label key={f} className="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl cursor-pointer"><input type="checkbox" checked={facilities.includes(f)} onChange={() => toggleFacility(f)} className="w-5 h-5 accent-emerald-600" /><span>{f}</span></label>))}</div></div>
-                <div><label className="block text-sm font-bold text-slate-600 mb-2">Other Amenities</label><textarea placeholder="List other features..." value={otherAmenities} onChange={(e) => setOtherAmenities(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 h-32" /></div>
-              </div>
-            </section>
+        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+          <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><Star className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION C: Facilities & Classification</h3></div>
+          <div className="space-y-8">
+            <div><label className="block text-sm font-bold text-slate-600 mb-4">Hotel Classification (★ rating) *</label><div className="flex gap-4">{[1, 2, 3, 4, 5].map(s => (<label key={s} className="flex items-center space-x-2 cursor-pointer"><input type="radio" checked={stars === s} onChange={() => setStars(s)} className="w-5 h-5 accent-amber-500" /><span>{s} ★</span></label>))}</div></div>
+            <div className="w-1/3"><label className="block text-sm font-bold text-slate-600 mb-2">Total Guest Rooms *</label><input required type="number" value={rooms} onChange={(e) => setRooms(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-4">Room Types Available</label><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{['Single', 'Double', 'Suite', 'Deluxe'].map(t => (<label key={t} className="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl cursor-pointer"><input type="checkbox" checked={roomTypes.includes(t)} onChange={() => toggleRoomType(t)} className="w-5 h-5 accent-emerald-600" /><span>{t}</span></label>))}</div></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-4">In-House Facilities</label><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{['Restaurant', 'Bar', 'Pool', 'Conference Room', 'Spa', 'Wi-Fi', 'Gym', 'Laundry', 'Beachfront', 'Airport Shuttle', 'Security'].map(f => (<label key={f} className="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl cursor-pointer"><input type="checkbox" checked={facilities.includes(f)} onChange={() => toggleFacility(f)} className="w-5 h-5 accent-emerald-600" /><span>{f}</span></label>))}</div></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">Other Amenities</label><textarea placeholder="List other features..." value={otherAmenities} onChange={(e) => setOtherAmenities(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 h-32" /></div>
+          </div>
+        </section>
 
-            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
-              <div className="flex items-center mb-4 border-b border-slate-100 pb-4"><Scale className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION D: Compliance &amp; Documentation</h3></div>
-              <p className="text-slate-400 text-xs mb-8 italic font-medium">Upload official PDF documents for verification. Accepted format: PDF only.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div><label className="block text-sm font-bold text-slate-600 mb-2">TIN Number *</label><input required type="text" value={tin} onChange={(e) => setTin(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-                <div><label className="block text-sm font-bold text-slate-600 mb-2">NTB License Number *</label><input required type="text" value={ntbLicense} onChange={(e) => setNtbLicense(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+          <div className="flex items-center mb-4 border-b border-slate-100 pb-4"><Scale className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION D: Compliance &amp; Documentation</h3></div>
+          <p className="text-slate-400 text-xs mb-8 italic font-medium">Upload official PDF documents for verification. Accepted format: PDF only.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">TIN Number *</label><input required type="text" value={tin} onChange={(e) => setTin(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">National Tourist Board License Number *</label><input required type="text" value={ntbLicense} onChange={(e) => setNtbLicense(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
 
-                {([
-                  { key: 'certIncorporation', label: 'Certificate of Incorporation' },
-                  { key: 'bizRegCert', label: 'Business Registration Certificate' },
-                  { key: 'ntbCert', label: 'NTB License Certificate' },
-                  { key: 'taxClearance', label: 'Tax Clearance Certificate' },
-                ] as { key: string; label: string }[]).map(({ key, label }) => (
-                  <div key={key} className="space-y-2">
-                    <label className="block text-sm font-bold text-slate-600">{label}</label>
-                    <div className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${(newDocuments as any)[key] ? 'border-emerald-400 bg-emerald-50' : (existingDocuments as any)[key] ? 'border-slate-200 bg-slate-50' : 'border-dashed border-slate-200 bg-slate-50/50'}`}>
-                      <div className="flex items-center space-x-3 min-w-0">
-                        <div className={`p-2 rounded-lg shrink-0 ${(newDocuments as any)[key] || (existingDocuments as any)[key] ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                          <FileText size={18} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-700 truncate">
-                            {(newDocuments as any)[key] ? (newDocuments as any)[key].name : (existingDocuments as any)[key] ? 'Document uploaded' : 'No file selected'}
-                          </p>
-                          <p className="text-[10px] text-slate-400">PDF only</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2 shrink-0 ml-2">
-                        {(existingDocuments as any)[key] && !(newDocuments as any)[key] && (
-                          <a href={(existingDocuments as any)[key]} target="_blank" rel="noopener noreferrer" className="p-2 bg-white border border-slate-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all" title="View document">
-                            <Eye size={14} />
-                          </a>
-                        )}
-                        {((existingDocuments as any)[key] || (newDocuments as any)[key]) && (
-                          <button type="button" onClick={() => removeDocument(key)} className="p-2 bg-white border border-rose-200 text-rose-500 rounded-lg hover:bg-rose-50 transition-all" title="Remove document">
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                        <button type="button" onClick={() => document.getElementById(key)?.click()} className="flex items-center space-x-1 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all">
-                          <UploadCloud size={14} /><span>{(newDocuments as any)[key] || (existingDocuments as any)[key] ? 'Replace' : 'Upload'}</span>
-                        </button>
-                      </div>
+            {([
+              { key: 'certIncorporation', label: 'Certificate of Incorporation' },
+              { key: 'bizRegCert', label: 'Business Registration Certificate' },
+              { key: 'ntbCert', label: 'National Tourist Board License Certificate' },
+              { key: 'taxClearance', label: 'Tax Clearance Certificate' },
+            ] as { key: string; label: string }[]).map(({ key, label }) => (
+              <div key={key} className="space-y-2">
+                <label className="block text-sm font-bold text-slate-600">{label}</label>
+                <div className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${(newDocuments as any)[key] ? 'border-emerald-400 bg-emerald-50' : (existingDocuments as any)[key] ? 'border-slate-200 bg-slate-50' : 'border-dashed border-slate-200 bg-slate-50/50'}`}>
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <div className={`p-2 rounded-lg shrink-0 ${(newDocuments as any)[key] || (existingDocuments as any)[key] ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                      <FileText size={18} />
                     </div>
-                    <input type="file" id={key} className="hidden" accept=".pdf" onChange={(e) => handleDocUpload(e, key)} />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-700 truncate">
+                        {(newDocuments as any)[key] ? (newDocuments as any)[key].name : (existingDocuments as any)[key] ? 'Document uploaded' : 'No file selected'}
+                      </p>
+                      <p className="text-[10px] text-slate-400">PDF only</p>
+                    </div>
                   </div>
-                ))}
-
-                <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Compliance Remarks</label><textarea value={complianceRemarks} onChange={(e) => setComplianceRemarks(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none h-24 bg-slate-50" /></div>
-              </div>
-            </section>
-
-
-            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
-              <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><FileSignature className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION E: Commitment</h3></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div><label className="block text-sm font-bold text-slate-600 mb-2">Signee Name *</label><input required type="text" value={signeeName} onChange={(e) => setSigneeName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-                <div><label className="block text-sm font-bold text-slate-600 mb-2">Position *</label><input required type="text" value={signeePosition} onChange={(e) => setSigneePosition(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-                <div><label className="block text-sm font-bold text-slate-600 mb-2">Date</label><input type="date" value={signeeDate} onChange={(e) => setSigneeDate(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
-              </div>
-            </section>
-
-            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
-              <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
-                <div className="flex items-center"><ImageIcon className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION F: Media Gallery</h3></div>
-                <span className={`text-xs font-black px-3 py-1 rounded-full ${galleryPreviews.length >= 10 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
-                  {galleryPreviews.length} / 10 photos
-                </span>
-              </div>
-              {galleryPreviews.length === 0 && (
-                <div className="py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100 flex flex-col items-center justify-center mb-6">
-                  <ImageIcon size={40} className="text-slate-200 mb-3" />
-                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No photos yet — add up to 10 images</p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {galleryPreviews.map((img, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden group border border-slate-100">
-                    <img src={img} alt="Gallery" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
-                    <button type="button" onClick={() => removeImage(idx)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600">
-                      <X size={12} />
-                    </button>
-                    {idx < existingGallery.length && (
-                      <span className="absolute bottom-2 left-2 text-[8px] font-black bg-black/50 text-white px-2 py-0.5 rounded-full uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">Saved</span>
+                  <div className="flex items-center space-x-2 shrink-0 ml-2">
+                    {(existingDocuments as any)[key] && !(newDocuments as any)[key] && (
+                      <a href={(existingDocuments as any)[key]} target="_blank" rel="noopener noreferrer" className="p-2 bg-white border border-slate-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all" title="View document">
+                        <Eye size={14} />
+                      </a>
                     )}
+                    {((existingDocuments as any)[key] || (newDocuments as any)[key]) && (
+                      <button type="button" onClick={() => removeDocument(key)} className="p-2 bg-white border border-rose-200 text-rose-500 rounded-lg hover:bg-rose-50 transition-all" title="Remove document">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                    <button type="button" onClick={() => document.getElementById(key)?.click()} className="flex items-center space-x-1 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all">
+                      <UploadCloud size={14} /><span>{(newDocuments as any)[key] || (existingDocuments as any)[key] ? 'Replace' : 'Upload'}</span>
+                    </button>
                   </div>
-                ))}
-                {galleryPreviews.length < 10 && (
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-500 hover:bg-emerald-50 transition-all">
-                    <Plus size={24} className="mb-2" /><span className="text-[10px] font-bold uppercase">Add Photo</span>
-                  </button>
+                </div>
+                <input type="file" id={key} className="hidden" accept=".pdf" onChange={(e) => handleDocUpload(e, key)} />
+              </div>
+            ))}
+
+            <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Compliance Remarks</label><textarea value={complianceRemarks} onChange={(e) => setComplianceRemarks(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none h-24 bg-slate-50" /></div>
+          </div>
+        </section>
+
+
+        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+          <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><FileSignature className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION E: Commitment</h3></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">Signee Name *</label><input required type="text" value={signeeName} onChange={(e) => setSigneeName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">Position *</label><input required type="text" value={signeePosition} onChange={(e) => setSigneePosition(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+            <div><label className="block text-sm font-bold text-slate-600 mb-2">Date</label><input type="date" value={signeeDate} onChange={(e) => setSigneeDate(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
+          </div>
+        </section>
+
+        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+          <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
+            <div className="flex items-center"><ImageIcon className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION F: Media Gallery</h3></div>
+            <span className={`text-xs font-black px-3 py-1 rounded-full ${galleryPreviews.length >= 10 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
+              {galleryPreviews.length} / 10 photos
+            </span>
+          </div>
+          {galleryPreviews.length === 0 && (
+            <div className="py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100 flex flex-col items-center justify-center mb-6">
+              <ImageIcon size={40} className="text-slate-200 mb-3" />
+              <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No photos yet — add up to 10 images</p>
+            </div>
+          )}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {galleryPreviews.map((img, idx) => (
+              <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden group border border-slate-100">
+                <img src={img} alt="Gallery" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+                <button type="button" onClick={() => removeImage(idx)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600">
+                  <X size={12} />
+                </button>
+                {idx < existingGallery.length && (
+                  <span className="absolute bottom-2 left-2 text-[8px] font-black bg-black/50 text-white px-2 py-0.5 rounded-full uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">Saved</span>
                 )}
               </div>
-              <input type="file" ref={fileInputRef} onChange={handleImageUpload} multiple accept="image/webp,image/jpeg,image/jpg,image/png,.webp,.jpg,.jpeg,.png" className="hidden" />
-            </section>
-
-          </>
-        ) : (
-          <div className="bg-emerald-900 rounded-[3rem] p-12 md:p-20 text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-10 opacity-10">
-              <ShieldCheck size={180} className="text-white" />
-            </div>
-            <div className="relative z-10">
-              <h3 className="text-3xl font-black text-white uppercase tracking-tighter mb-6">
-                {status === 'pending' ? 'Membership Approval Required' : 'Access Restricted'}
-              </h3>
-              <p className="text-emerald-100/70 max-w-2xl mx-auto mb-10 text-lg leading-relaxed font-medium">
-                {status === 'pending'
-                  ? 'Your application is currently under review. Sections B through F will be unlocked once your membership is approved by the SLAH Secretariat.'
-                  : `Your current membership status is "${status}". Access to full property details and gallery management is restricted. Please contact the Secretariat for more information.`}
-              </p>
-              <div className={`w-20 h-1.5 mx-auto rounded-full ${status === 'pending' ? 'bg-amber-500' : 'bg-rose-500'}`}></div>
-            </div>
+            ))}
+            {galleryPreviews.length < 10 && (
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-emerald-500 hover:bg-emerald-50 transition-all">
+                <Plus size={24} className="mb-2" /><span className="text-[10px] font-bold uppercase">Add Photo</span>
+              </button>
+            )}
           </div>
-        )}
+          <input type="file" ref={fileInputRef} onChange={handleImageUpload} multiple accept="image/webp,image/jpeg,image/jpg,image/png,.webp,.jpg,.jpeg,.png" className="hidden" />
+        </section>
+
 
         <button onClick={handleSave} disabled={saving} className="w-full bg-emerald-700 text-white py-6 rounded-3xl font-black text-xl shadow-2xl hover:bg-emerald-800 transition-all flex items-center justify-center disabled:opacity-50">
           {saving ? <Loader2 size={24} className="animate-spin mr-3" /> : <FileCheck size={24} className="mr-3" />}
