@@ -23,24 +23,34 @@ const Secretariat: React.FC = () => {
       image: ''
     },
     {
-      name: 'Mr. Samuel Bangura',
-      position: 'Finance & Accounts Officer',
-      image: '/assets/images/secretariat/finance_officer.png'
+      name: 'Develeena Vanboi',
+      position: 'Vice President',
+      image: ''
     },
     {
-      name: 'Mrs. Zainab Kamara',
-      position: 'Communications & PR',
-      image: '/assets/images/secretariat/comm_officer.png'
+      name: 'Mars Taladro',
+      position: 'Dep. Secretary General',
+      image: ''
     },
     {
-      name: 'Mr. Alusine Sesay',
-      position: 'IT & Systems Support',
-      image: '/assets/images/secretariat/it_support.png'
+      name: 'Mr. Jalloh',
+      position: 'PRO',
+      image: ''
     },
     {
-      name: 'Ms. Aminata Conteh',
-      position: 'Office Assistant',
-      image: '/assets/images/secretariat/office_assistant.png'
+      name: 'Annette Bangura',
+      position: 'VP Northern Region',
+      image: ''
+    },
+    {
+      name: 'Patrick Senessi',
+      position: 'VP Eastern Region',
+      image: ''
+    },
+    {
+      name: 'Saleh Yahya',
+      position: 'Southern Region',
+      image: ''
     }
   ];
 
