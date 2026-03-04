@@ -58,7 +58,7 @@ const Home: React.FC = () => {
             <span className="inline-block bg-amber-500 text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
               Official Association
             </span>
-            <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-8">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight mb-8">
               Uniting Hotels.<br />
               Strengthening Hospitality.<br />
               Growing Tourism.
@@ -96,6 +96,32 @@ const Home: React.FC = () => {
           <div className="text-center px-8 flex-1">
             <div className="text-3xl font-bold text-emerald-800">{stats.impact}</div>
             <div className="text-slate-500 text-sm uppercase font-semibold">Economic Impact</div>
+          </div>
+        </div>
+      </section>
+
+      {/* Mobile Stats (visible on small screens only) */}
+      <section className="lg:hidden bg-white border-b border-slate-100 py-8">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-50 rounded-2xl p-5 text-center">
+              <div className="text-2xl font-bold text-emerald-800">{stats.hotels > 0 ? `${stats.hotels}+` : '—'}</div>
+              <div className="text-slate-500 text-xs uppercase font-semibold mt-1">Member Hotels</div>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-5 text-center">
+              <div className="text-2xl font-bold text-emerald-800">
+                {stats.jobs >= 1000 ? `${(stats.jobs / 1000).toFixed(1)}k+` : stats.jobs > 0 ? `${stats.jobs}+` : '—'}
+              </div>
+              <div className="text-slate-500 text-xs uppercase font-semibold mt-1">Jobs Represented</div>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-5 text-center">
+              <div className="text-2xl font-bold text-emerald-800">15+</div>
+              <div className="text-slate-500 text-xs uppercase font-semibold mt-1">Years of Service</div>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-5 text-center">
+              <div className="text-2xl font-bold text-emerald-800">{stats.impact}</div>
+              <div className="text-slate-500 text-xs uppercase font-semibold mt-1">Economic Impact</div>
+            </div>
           </div>
         </div>
       </section>
@@ -232,7 +258,7 @@ const Home: React.FC = () => {
       <section className="py-20 bg-slate-50 border-y border-slate-100">
         <div className="container mx-auto px-4 md:px-8">
           <p className="text-center text-slate-400 font-bold uppercase tracking-[0.2em] text-xs mb-12">Our Partners & Stakeholders</p>
-          <div className="flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-12 lg:gap-20 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
             {/* Mock Partner Logos */}
             <div className="text-2xl font-black text-slate-400 flex items-center"><Globe className="mr-2" /> MINISTRY OF TOURISM</div>
             <div className="text-2xl font-black text-slate-400 flex items-center"><Building2 className="mr-2" /> NATIONAL TOURIST BOARD</div>

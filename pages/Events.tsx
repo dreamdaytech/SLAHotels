@@ -129,10 +129,10 @@ const Events: React.FC = () => {
     <div className="pt-32 lg:pt-40 pb-32 african-accents">
       <div className="container mx-auto px-4 md:px-8">
         <div className="max-w-4xl mb-20">
-          <h1 className="text-5xl md:text-8xl font-black text-slate-900 mb-8 tracking-tighter leading-none">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-black text-slate-900 mb-8 tracking-tighter leading-none">
             Events <span className="text-emerald-600">&</span> Summits
           </h1>
-          <p className="text-xl md:text-2xl text-slate-500 font-medium leading-relaxed">
+          <p className="text-base sm:text-xl md:text-2xl text-slate-500 font-medium leading-relaxed">
             Discover the roadmap for Sierra Leone's hospitality excellence. Join industry-defining summits, professional workshops, and networking forums.
           </p>
         </div>
@@ -141,7 +141,7 @@ const Events: React.FC = () => {
         <div className="space-y-8 mb-16">
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
             {/* Status Navigation Tabs */}
-            <div className="flex p-1.5 bg-slate-100 rounded-[1.75rem] w-fit overflow-x-auto no-scrollbar scroll-smooth">
+            <div className="flex p-1.5 bg-slate-100 rounded-[1.75rem] w-full sm:w-fit overflow-x-auto no-scrollbar scroll-smooth pb-1">
               {[
                 { id: 'all', label: 'All Events', icon: <LayoutGrid size={14} /> },
                 { id: 'upcoming', label: 'Upcoming', icon: <CalendarDays size={14} /> },

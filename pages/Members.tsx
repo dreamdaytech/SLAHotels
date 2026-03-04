@@ -112,7 +112,7 @@ const Members: React.FC = () => {
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
           <div>
             <p className="text-emerald-600 text-xs font-black uppercase tracking-[0.25em] mb-3">Sierra Leone Association of Hotels</p>
-            <h1 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter leading-none">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 tracking-tighter leading-none">
               Member <span className="text-emerald-600">Directory</span>
             </h1>
             <p className="text-slate-500 text-lg mt-4 max-w-xl leading-relaxed">
@@ -151,13 +151,13 @@ const Members: React.FC = () => {
               )}
             </div>
 
-            {/* Sort */}
-            <div className="hidden lg:flex items-center gap-2 shrink-0">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sort</span>
+            {/* Sort — visible on all sizes */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline">Sort</span>
               <div className="relative">
                 <select
                   value={sortBy} onChange={e => setSortBy(e.target.value)}
-                  className="appearance-none bg-slate-50 rounded-2xl pl-5 pr-10 py-4 text-xs font-black text-slate-700 outline-none cursor-pointer uppercase tracking-widest border-none"
+                  className="appearance-none bg-slate-50 rounded-2xl pl-4 pr-9 py-4 text-xs font-black text-slate-700 outline-none cursor-pointer uppercase tracking-widest border-none"
                 >
                   <option value="name-asc">A → Z</option>
                   <option value="name-desc">Z → A</option>
@@ -166,7 +166,7 @@ const Members: React.FC = () => {
                   <option value="capacity-desc">Most Rooms</option>
                   <option value="capacity-asc">Fewest Rooms</option>
                 </select>
-                <ChevronDown size={13} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
             </div>
 
@@ -174,8 +174,8 @@ const Members: React.FC = () => {
             <button
               onClick={() => setIsFilterVisible(!isFilterVisible)}
               className={`flex items-center justify-center gap-2 px-8 py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] transition-all ${isFilterVisible || hasFilters
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
-                  : 'bg-slate-900 text-white hover:bg-slate-700'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
+                : 'bg-slate-900 text-white hover:bg-slate-700'
                 }`}
             >
               <Filter size={16} />
@@ -241,8 +241,8 @@ const Members: React.FC = () => {
                   {allPossibleFacilities.map(f => (
                     <button key={f} onClick={() => toggleFacility(f)}
                       className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all ${selectedFacilities.includes(f)
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow'
-                          : 'bg-white text-slate-500 border-slate-100 hover:border-emerald-200 hover:bg-emerald-50'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow'
+                        : 'bg-white text-slate-500 border-slate-100 hover:border-emerald-200 hover:bg-emerald-50'
                         }`}>
                       {facilityIcon[f]} {f}
                     </button>
