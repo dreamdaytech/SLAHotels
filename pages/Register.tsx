@@ -199,7 +199,7 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      let currentUserId: string;
+      let currentUserId: string = user?.id || '';
 
       // ── NEW USER: create account + hotel in one flow ───────────────────────
       if (!user) {
@@ -209,8 +209,12 @@ const Register: React.FC = () => {
           options: { data: { name: fullName, role: 'member', password_changed: true } }
         });
 
-        if (signUpError) throw signUpError;
-        if (!signUpData.user) throw new Error('Failed to create account. Please try again.');
+        if (signUpError) {
+          throw new Error('Could not create account: ' + signUpError.message);
+        }
+        if (!signUpData.user) {
+          throw new Error('Failed to create account (no user data returned). Please try again.');
+        }
 
         currentUserId = signUpData.user.id;
 
@@ -222,54 +226,61 @@ const Register: React.FC = () => {
             password: accountPassword,
           });
           if (signInError) {
-            setLoading(false);
             setSubmittedSuccess('account_created_needs_login');
-            // We cannot proceed to upload documents or insert hotel data without a valid auth session due to RLS.
+            // Allow state to flush before returning
+            setTimeout(() => setLoading(false), 100);
             return;
           }
         }
 
         // Set password_changed flag after DB trigger creates the profile
         setTimeout(async () => {
-          await supabase.from('profiles').update({ password_changed: true }).eq('id', currentUserId);
-        }, 1500);
-
-      } else {
-        // ── LOGGED-IN USER: update existing record ─────────────────────────
-        currentUserId = user.id;
+          try {
+            await supabase.from('profiles').update({ password_changed: true }).eq('id', currentUserId);
+          } catch (err) { /* ignore */ }
+        }, 2000);
       }
 
       // 1. Upload Gallery Images
-      const galleryUrls = await Promise.all(
-        galleryImages.map(async (file) => {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${Math.random()}.${fileExt}`;
-          const filePath = `gallery/${fileName}`;
+      let galleryUrls: string[] = [];
+      try {
+        galleryUrls = await Promise.all(
+          galleryImages.map(async (file) => {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `gallery/${fileName}`;
 
-          const { data, error } = await supabase.storage
-            .from('hotel-gallery')
-            .upload(filePath, file as File);
+            const { error: uploadError } = await supabase.storage
+              .from('hotel-gallery')
+              .upload(filePath, file as File);
 
-          if (error) throw error;
-          const { data: { publicUrl } } = supabase.storage.from('hotel-gallery').getPublicUrl(filePath);
-          return publicUrl;
-        })
-      );
+            if (uploadError) throw uploadError;
+            const { data: { publicUrl } } = supabase.storage.from('hotel-gallery').getPublicUrl(filePath);
+            return publicUrl;
+          })
+        );
+      } catch (imgError: any) {
+        throw new Error('Failed to upload gallery images: ' + (imgError.message || 'Unknown error'));
+      }
 
       // 2. Upload Documents
       const documentUrls: { [key: string]: string } = {};
-      for (const [key, file] of Object.entries(documents)) {
-        const fileExt = (file as File).name.split('.').pop();
-        const fileName = `${key}-${Math.random()}.${fileExt}`;
-        const filePath = `documents/${fileName}`;
+      try {
+        for (const [key, file] of Object.entries(documents)) {
+          const fileExt = (file as File).name.split('.').pop();
+          const fileName = `${key}-${Math.random()}.${fileExt}`;
+          const filePath = `documents/${fileName}`;
 
-        const { data, error } = await supabase.storage
-          .from('hotel-documents')
-          .upload(filePath, file as File);
+          const { error: docError } = await supabase.storage
+            .from('hotel-documents')
+            .upload(filePath, file as File);
 
-        if (error) throw error;
-        const { data: { publicUrl } } = supabase.storage.from('hotel-documents').getPublicUrl(filePath);
-        documentUrls[key] = publicUrl;
+          if (docError) throw docError;
+          const { data: { publicUrl } } = supabase.storage.from('hotel-documents').getPublicUrl(filePath);
+          documentUrls[key] = publicUrl;
+        }
+      } catch (docErr: any) {
+        throw new Error('Failed to upload compliance documents: ' + (docErr.message || 'Unknown error'));
       }
 
       // 3. Upsert into Hotels table
@@ -295,9 +306,8 @@ const Register: React.FC = () => {
         ntb_license: ntbLicense,
         compliance_remarks: complianceRemarks,
         documents: (() => {
-          // Start from existing docs, remove any the user explicitly removed
           const base: Record<string, string> = {};
-          if (userHotel?.documents) {
+          if (userHotel && userHotel.documents) {
             for (const [k, v] of Object.entries(userHotel.documents as Record<string, string>)) {
               if (!removedDocKeys.has(k)) base[k] = v;
             }
@@ -308,23 +318,19 @@ const Register: React.FC = () => {
         signee_position: signeePosition,
         signee_date: signeeDate,
         user_id: currentUserId,
-        status: 'pending', // Default to pending
+        status: userHotel ? userHotel.status : 'pending',
         gallery: galleryUrls.length > 0 ? [...(userHotel?.gallery || []), ...galleryUrls] : userHotel?.gallery
       };
 
-      // On update: always preserve the existing status (never downgrade an approved hotel).
-      // On new registration: default to 'pending' for admin review.
-      if (userHotel) {
-        hotelPayload.status = userHotel.status;
-      } else {
-        hotelPayload.status = 'pending';
+      try {
+        const { error: insertError } = userHotel
+          ? await supabase.from('hotels').update(hotelPayload).eq('id', userHotel.id).select()
+          : await supabase.from('hotels').insert([hotelPayload]).select();
+
+        if (insertError) throw insertError;
+      } catch (dbErr: any) {
+        throw new Error('Failed to save hotel application: ' + (dbErr.message || 'Unknown database error'));
       }
-
-      const { data, error } = userHotel
-        ? await supabase.from('hotels').update(hotelPayload).eq('id', userHotel.id).select()
-        : await supabase.from('hotels').insert([hotelPayload]).select();
-
-      if (error) throw error;
 
       // 4. Log Activity
       try {
@@ -337,7 +343,7 @@ const Register: React.FC = () => {
         });
       } catch (_) { /* non-critical */ }
 
-      // Refresh data then show success screen
+      // Success
       setLoading(false);
       try { await refreshData(); } catch (_) { /* silent */ }
 
@@ -349,11 +355,10 @@ const Register: React.FC = () => {
       }
 
     } catch (err: any) {
-      console.error('Error submitting form:', err.message);
-      showNotification('Error: ' + err.message, 'error');
-    } finally {
-      // Safety net: ensure loading is always cleared
-      setLoading(false);
+      console.error('Error submitting form:', err);
+      // Give UI thread a tiny moment to breathe properly before rendering error
+      setTimeout(() => setLoading(false), 50);
+      showNotification(err.message || 'An unexpected error occurred during submission.', 'error');
     }
   };
 
