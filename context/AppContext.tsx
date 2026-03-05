@@ -59,34 +59,46 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const fetchAppData = async () => {
-    const [newsRes, eventsRes, hotelsRes, profilesRes, activitiesRes] = await Promise.all([
-      supabase.from('news').select('*').order('date', { ascending: false }),
-      supabase.from('events').select('*').order('date', { ascending: true }),
-      supabase.from('hotels').select('*').order('hotel_name', { ascending: true }),
-      supabase.from('profiles').select('*'),
-      supabase.from('activities').select('*').order('created_at', { ascending: false }) // Added activities
-    ]);
+    try {
+      const [newsRes, eventsRes, hotelsRes, profilesRes, activitiesRes] = await Promise.all([
+        supabase.from('news').select('*').order('date', { ascending: false }),
+        supabase.from('events').select('*').order('date', { ascending: true }),
+        supabase.from('hotels').select('*').order('hotel_name', { ascending: true }),
+        supabase.from('profiles').select('*'),
+        supabase.from('activities').select('*').order('created_at', { ascending: false }) // Added activities
+      ]);
 
-    if (newsRes.data) setNews(newsRes.data);
-    if (eventsRes.data) setEvents(eventsRes.data);
+      if (newsRes.data) setNews(newsRes.data);
+      if (eventsRes.data) setEvents(eventsRes.data);
 
-    if (hotelsRes.data) {
-      setHotels(hotelsRes.data);
-      // For public visibility, we only consider approved hotels as "members" in the directory
-      const approvedHotels = hotelsRes.data.filter((h: any) => h.status === 'approved');
-      setMembers(approvedHotels);
-    } else if (hotelsRes.error) {
-      console.error('Error fetching hotels:', hotelsRes.error);
-    }
+      if (hotelsRes.data) {
+        setHotels(hotelsRes.data);
+        // For public visibility, we only consider approved hotels as "members" in the directory
+        const approvedHotels = hotelsRes.data.filter((h: any) => h.status === 'approved');
+        setMembers(approvedHotels);
+      } else if (hotelsRes.error) {
+        console.warn('Warning fetching hotels:', hotelsRes.error);
+      }
 
-    if (profilesRes.data) setProfiles(profilesRes.data);
-    if (activitiesRes.data) setActivities(activitiesRes.data);
+      if (profilesRes.data) setProfiles(profilesRes.data);
+      if (activitiesRes.data) setActivities(activitiesRes.data);
 
-    // Update userHotel if user is logged in
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user && hotelsRes.data) {
-      const myHotel = hotelsRes.data.find((h: any) => h.user_id === session.user.id || h.email === session.user.email);
-      setUserHotel(myHotel || null);
+      // Update userHotel if user is logged in
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && hotelsRes.data) {
+          const myHotel = hotelsRes.data.find((h: any) => h.user_id === session.user.id || h.email === session.user.email);
+          setUserHotel(myHotel || null);
+        }
+      } catch (sessionErr: any) {
+        console.warn('Session check aborted during app data fetch:', sessionErr);
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError' || err?.message?.includes('aborted')) {
+        console.warn('Network request aborted during app data fetch. Recovery should be automatic.');
+      } else {
+        console.error('Error fetching app data:', err);
+      }
     }
   };
 

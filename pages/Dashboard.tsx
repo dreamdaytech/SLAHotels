@@ -1549,9 +1549,15 @@ const Applications = () => {
             <tbody className="divide-y divide-slate-50">
               {filteredApps.map((app) => (
                 <tr key={app.id} className="hover:bg-slate-50/50 transition-colors text-sm group">
-                  <td className="px-10 py-6">
-                    <div className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">{app.hotelName}</div>
-                    <div className="text-[9px] text-slate-400 uppercase font-black">{app.city}</div>
+                  <td 
+                    className="px-10 py-6 cursor-pointer" 
+                    onClick={() => navigate('/dashboard/applications/' + app.id)}
+                  >
+                    <div className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors flex items-center gap-2">
+                      {app.hotelName}
+                      <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-600" />
+                    </div>
+                    <div className="text-[9px] text-slate-400 uppercase font-black mt-1">{app.city}</div>
                   </td>
                   <td className="px-10 py-6 text-slate-500 font-medium">{app.owner}</td>
                   <td className="px-10 py-6 text-slate-400 font-bold text-xs">{app.date}</td>

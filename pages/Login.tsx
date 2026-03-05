@@ -37,37 +37,41 @@ export default function Login() {
 
     // 2. Check session and profile state
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
 
-      if (session?.user) {
-        // Fetch profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+        if (session?.user) {
+          // Fetch profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-        if (profile) {
-          // STATE-FIRST: If database confirms password is changed, bypass all reset views
-          if (profile.password_changed) {
-            console.log('Password verified in database. Transitioning to dashboard.');
-            cleanupAuthFragment();
-            navigate('/dashboard', { replace: true });
-            return;
+          if (profile) {
+            // STATE-FIRST: If database confirms password is changed, bypass all reset views
+            if (profile.password_changed) {
+              console.log('Password verified in database. Transitioning to dashboard.');
+              cleanupAuthFragment();
+              navigate('/dashboard', { replace: true });
+              return;
+            }
+
+            // Detect if we came from a recovery link (typically via hash)
+            const isRecovery = window.location.hash.includes('type=recovery');
+
+            if (isRecovery) {
+              setView('recovery');
+            } else if (!profile.password_changed) {
+              setView('update');
+            }
           }
-
-          // Detect if we came from a recovery link (typically via hash)
-          const isRecovery = window.location.hash.includes('type=recovery');
-
-          if (isRecovery) {
-            setView('recovery');
-          } else if (!profile.password_changed) {
-            setView('update');
-          }
+        } else {
+          // If no user, just clean up if there's an error fragment
+          cleanupAuthFragment();
         }
-      } else {
-        // If no user, just clean up if there's an error fragment
-        cleanupAuthFragment();
+      } catch (err: any) {
+        console.warn('checkUser aborted or failed:', err);
       }
     };
     checkUser();
@@ -102,18 +106,32 @@ export default function Login() {
       }
     };
 
+    const fetchProfile = async (userId: string, retryCount = 0): Promise<any> => {
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        if (profileError) throw profileError;
+        return profile;
+      } catch (err: any) {
+        const isAbortError = err.name === 'AbortError' || err.message?.toLowerCase().includes('abort');
+        if (isAbortError && retryCount < 2) {
+          console.warn(`Profile fetch aborted. Retrying... (Attempt ${retryCount + 1})`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return fetchProfile(userId, retryCount + 1);
+        }
+        throw err;
+      }
+    };
+
     try {
       const authData = await attemptLogin();
 
       if (authData.user) {
-        // Fetch profile to check password_changed flag
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authData.user.id)
-          .single();
-
-        if (profileError) throw profileError;
+        // Fetch profile to check password_changed flag with retry logic
+        const profile = await fetchProfile(authData.user.id);
 
         const userData = {
           ...authData.user,
