@@ -172,7 +172,19 @@ const Register: React.FC = () => {
       setDistrict(userHotel.district || '');
       setEmail(userHotel.email || user?.email || '');
       setHotelEmail(userHotel.email || '');
-      setContact(userHotel.contact || '');
+      if (userHotel.contact) {
+        setContact(userHotel.contact);
+        const parts = userHotel.contact.split(' ');
+        if (parts.length > 1 && parts[0].startsWith('+')) {
+          setCountryCode(parts[0]);
+          setContactLocal(parts.slice(1).join(' '));
+        } else {
+          setContactLocal(userHotel.contact);
+        }
+      } else {
+        setContact('');
+        setContactLocal('');
+      }
       setWebsite(userHotel.website || '');
       setOwner(userHotel.owner || '');
       setManager(userHotel.manager || '');
