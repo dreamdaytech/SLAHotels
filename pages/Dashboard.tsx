@@ -2393,8 +2393,8 @@ const UserManagement = () => {
               <UserPlus size={16} className="mr-2" /> New User
             </button>
           </div>
-          <div className="overflow-x-auto min-h-[450px]">
-            <table className="w-full text-left min-w-[500px]">
+          <div>
+            <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
                 <tr>
                   <th className="px-4 md:px-8 py-4">Name</th>
@@ -2441,7 +2441,7 @@ const UserManagement = () => {
                           onClick={() => setOpenMenuId(openMenuId === u.id ? null : u.id)}
                           className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
                         >
-                          <MoreHorizontal size={20} />
+                          <MoreVertical size={20} />
                         </button>
 
                         {openMenuId === u.id && (
