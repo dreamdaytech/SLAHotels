@@ -207,6 +207,7 @@ const Register: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     if (!validate()) return;
     setLoading(true);
 
@@ -1004,10 +1005,10 @@ const Register: React.FC = () => {
           <button
             disabled={loading}
             type="submit"
-            className="w-full bg-emerald-700 text-white py-6 rounded-3xl font-black text-xl shadow-2xl hover:bg-emerald-800 transition-all transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50"
+            className="w-full bg-emerald-700 text-white py-6 rounded-3xl font-black text-xl shadow-2xl hover:bg-emerald-800 transition-all transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 size={24} className="animate-spin mr-3" /> : <FileCheck size={24} className="mr-3" />}
-            {!user ? 'Register & Submit Application' : 'Update Registration Profile'}
+            {loading ? 'Submitting Application...' : (!user ? 'Register & Submit Application' : 'Update Registration Profile')}
           </button>
         </form>
       </div>
