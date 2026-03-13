@@ -60,13 +60,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const fetchAppData = async () => {
     try {
-      const [newsRes, eventsRes, hotelsRes, profilesRes, activitiesRes] = await Promise.all([
-        supabase.from('news').select('*').order('date', { ascending: false }),
-        supabase.from('events').select('*').order('date', { ascending: true }),
-        supabase.from('hotels').select('*').order('hotel_name', { ascending: true }),
-        supabase.from('profiles').select('*'),
-        supabase.from('activities').select('*').order('created_at', { ascending: false }) // Added activities
-      ]);
+      // Fetching sequentially to prevent Supabase lock contention (AbortError)
+      const newsRes = await supabase.from('news').select('*').order('date', { ascending: false });
+      const eventsRes = await supabase.from('events').select('*').order('date', { ascending: true });
+      const hotelsRes = await supabase.from('hotels').select('*').order('hotel_name', { ascending: true });
+      const profilesRes = await supabase.from('profiles').select('*');
+      const activitiesRes = await supabase.from('activities').select('*').order('created_at', { ascending: false });
 
       if (newsRes.data) setNews(newsRes.data);
       if (eventsRes.data) setEvents(eventsRes.data);

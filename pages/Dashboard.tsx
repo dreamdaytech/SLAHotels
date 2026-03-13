@@ -2747,6 +2747,7 @@ const EventsManagement = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [viewingEvent, setViewingEvent] = useState<any>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const events = useMemo(() => {
     if (isAdmin) return contextEvents;
@@ -3600,78 +3601,102 @@ const EventsManagement = () => {
                           </div>
                         </td>
                         <td className="px-8 py-5 text-right">
-                          <div className="flex justify-end space-x-1" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end relative" onClick={(e) => e.stopPropagation()}>
                             <button
-                              onClick={() => setViewingEvent(event)}
-                              title="View Details"
-                              className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                              onClick={() => setOpenMenuId(openMenuId === event.id ? null : event.id)}
+                              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
                             >
-                              <Eye size={16} />
+                              <MoreVertical size={20} />
                             </button>
 
-                            <button
-                              onClick={() => openEditForm(event)}
-                              title="Edit Event"
-                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                            >
-                              <Edit3 size={16} />
-                            </button>
+                            {openMenuId === event.id && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-[60]"
+                                  onClick={() => setOpenMenuId(null)}
+                                ></div>
+                                <div className="absolute right-0 top-12 w-56 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 py-4 z-[70] animate-in fade-in zoom-in-95 duration-200 origin-top-right ring-8 ring-white">
+                                  <div className="px-6 pb-3 border-b border-slate-50 mb-2">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Event Actions</p>
+                                  </div>
 
-                            {isAdmin && event.status === 'Pending' && (
-                              <button
-                                onClick={() => handleStatusChange(event.id, 'Published')}
-                                title="Approve & Publish"
-                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                              >
-                                <CheckCircle size={16} />
-                              </button>
+                                  <button
+                                    onClick={() => { setViewingEvent(event); setOpenMenuId(null); }}
+                                    className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 flex items-center transition-all group"
+                                  >
+                                    <Eye size={16} className="mr-3 text-slate-400 group-hover:text-emerald-500" /> View Details
+                                  </button>
+
+                                  <button
+                                    onClick={() => { openEditForm(event); setOpenMenuId(null); }}
+                                    className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 flex items-center transition-all group"
+                                  >
+                                    <Edit3 size={16} className="mr-3 text-slate-400 group-hover:text-indigo-500" /> Edit Event
+                                  </button>
+
+                                  {isAdmin && event.status === 'Pending' && (
+                                    <button
+                                      onClick={() => { handleStatusChange(event.id, 'Published'); setOpenMenuId(null); }}
+                                      className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 flex items-center transition-all group"
+                                    >
+                                      <CheckCircle size={16} className="mr-3 text-slate-400 group-hover:text-emerald-500" /> Approve &amp; Publish
+                                    </button>
+                                  )}
+
+                                  {isAdmin && event.status === 'Published' && (
+                                    <button
+                                      onClick={() => { handleStatusChange(event.id, 'Suspended'); setOpenMenuId(null); }}
+                                      className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 flex items-center transition-all group"
+                                    >
+                                      <AlertTriangle size={16} className="mr-3 text-slate-400 group-hover:text-amber-500" /> Suspend Event
+                                    </button>
+                                  )}
+
+                                  {isAdmin && event.status === 'Pending' && (
+                                    <button
+                                      onClick={() => { handleStatusChange(event.id, 'Declined'); setOpenMenuId(null); }}
+                                      className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-600 flex items-center transition-all group"
+                                    >
+                                      <XCircle size={16} className="mr-3 text-slate-400 group-hover:text-rose-500" /> Decline Event
+                                    </button>
+                                  )}
+
+                                  {isAdmin && event.status === 'Draft' && (
+                                    <button
+                                      onClick={() => { handlePublish(event.id); setOpenMenuId(null); }}
+                                      className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 flex items-center transition-all group"
+                                    >
+                                      <CheckCircle size={16} className="mr-3 text-slate-400 group-hover:text-emerald-500" /> Publish Now
+                                    </button>
+                                  )}
+
+                                  <div className="h-px bg-slate-50 my-1"></div>
+
+                                  <button
+                                    onClick={() => { handleDuplicate(event); setOpenMenuId(null); }}
+                                    className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 flex items-center transition-all group"
+                                  >
+                                    <Copy size={16} className="mr-3 text-slate-400 group-hover:text-amber-500" /> Duplicate Event
+                                  </button>
+
+                                  <button
+                                    onClick={() => { handleDelete(event.id); setOpenMenuId(null); }}
+                                    className="w-full px-6 py-4 text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center transition-all group"
+                                  >
+                                    <Trash2 size={16} className="mr-3 text-rose-400 group-hover:text-rose-600" /> Delete Event
+                                  </button>
+
+                                  <div className="mt-2 px-4">
+                                    <button
+                                      onClick={() => setOpenMenuId(null)}
+                                      className="w-full py-2 bg-slate-50 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-100 transition-colors"
+                                    >
+                                      Close Menu
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
                             )}
-
-                            {isAdmin && event.status === 'Published' && (
-                              <button
-                                onClick={() => handleStatusChange(event.id, 'Suspended')}
-                                title="Suspend Event"
-                                className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
-                              >
-                                <AlertTriangle size={16} />
-                              </button>
-                            )}
-
-                            {isAdmin && event.status === 'Pending' && (
-                              <button
-                                onClick={() => handleStatusChange(event.id, 'Declined')}
-                                title="Decline Event"
-                                className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            )}
-
-                            {isAdmin && event.status === 'Draft' && (
-                              <button
-                                onClick={() => handlePublish(event.id)}
-                                title="Publish Now"
-                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                              >
-                                <CheckCircle size={16} />
-                              </button>
-                            )}
-
-                            <button
-                              onClick={() => handleDuplicate(event)}
-                              title="Duplicate Event"
-                              className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
-                            >
-                              <Copy size={16} />
-                            </button>
-
-                            <button
-                              onClick={() => handleDelete(event.id)}
-                              title="Delete Event"
-                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                            >
-                              <Trash2 size={16} />
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -3701,11 +3726,24 @@ const EventsManagement = () => {
 };
 
 const NewsManagement = () => {
-  const { news: contextNews, refreshData, showNotification } = useAppContext();
+  const { user, news: contextNews, refreshData, showNotification } = useAppContext();
+  const isAdmin = user?.role === 'admin' || user?.role === 'super-admin';
   const [news, setNews] = useState<any[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const featureImageRef = useRef<HTMLInputElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.news-action-menu')) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Synchronize local news state with context news
   useEffect(() => {
@@ -3905,9 +3943,11 @@ const NewsManagement = () => {
               <h2 className="text-lg md:text-xl font-bold text-slate-900">News & Press</h2>
               <p className="text-slate-500 text-xs md:text-sm">Managing communications</p>
             </div>
-            <button onClick={() => setShowAddForm(true)} className="w-full sm:w-auto bg-emerald-600 text-white px-4 md:px-5 py-2 rounded-xl font-bold text-[10px] md:text-sm flex items-center justify-center hover:bg-emerald-700 shadow-lg">
-              <Plus size={16} className="mr-2" /> Create Article
-            </button>
+            {isAdmin && (
+              <button onClick={() => setShowAddForm(true)} className="w-full sm:w-auto bg-emerald-600 text-white px-4 md:px-5 py-2 rounded-xl font-bold text-[10px] md:text-sm flex items-center justify-center hover:bg-emerald-700 shadow-lg">
+                <Plus size={16} className="mr-2" /> Create Article
+              </button>
+            )}
           </div>
           <div>
             <table className="w-full text-left">
@@ -3917,7 +3957,7 @@ const NewsManagement = () => {
                   <th className="hidden md:table-cell px-4 md:px-8 py-4">Author</th>
                   <th className="hidden md:table-cell px-4 md:px-8 py-4">Date</th>
                   <th className="px-4 md:px-8 py-4">Status</th>
-                  <th className="px-4 md:px-8 py-4 text-right">Actions</th>
+                  {isAdmin && <th className="px-4 md:px-8 py-4 text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -3933,18 +3973,47 @@ const NewsManagement = () => {
                       </div>
                     </td>
                     <td className="hidden md:table-cell px-8 py-5 text-sm text-slate-500">{article.author}</td>
-                    <td className="hidden md:table-cell px-8 py-5 text-sm text-slate-400">{article.date}</td>
+                    <td className="hidden md:table-cell px-8 py-5 text-sm text-slate-400">
+                      {article.date ? new Date(article.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                    </td>
                     <td className="px-4 md:px-8 py-4 md:py-5">
                       <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest">
                         {article.status || 'Published'}
                       </span>
                     </td>
-                    <td className="px-4 md:px-8 py-4 md:py-5 text-right">
-                      <div className="flex justify-end space-x-1">
-                        <button onClick={() => openEdit(article)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg"><Edit3 size={16} /></button>
-                        <button onClick={() => handleDelete(article.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 size={16} /></button>
-                      </div>
-                    </td>
+                    {isAdmin && (
+                      <td className="px-4 md:px-8 py-4 md:py-5 text-right relative">
+                        <div className="flex justify-end news-action-menu">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(openMenuId === article.id ? null : article.id);
+                            }}
+                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          >
+                            <MoreVertical size={18} />
+                          </button>
+                          
+                          {openMenuId === article.id && (
+                            <div className="absolute right-8 top-12 md:right-12 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 text-left">
+                              <button 
+                                onClick={() => { openEdit(article); setOpenMenuId(null); }}
+                                className="w-full px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 flex items-center justify-start gap-3 transition-colors"
+                              >
+                                <Edit3 size={14} /> Edit Article
+                              </button>
+                              <div className="h-px bg-slate-50 my-1"></div>
+                              <button 
+                                onClick={() => { handleDelete(article.id); setOpenMenuId(null); }}
+                                className="w-full px-4 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center justify-start gap-3 transition-colors"
+                              >
+                                <Trash2 size={14} /> Delete Article
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -5603,7 +5672,7 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      <div className={`flex-grow ${isCollapsed ? 'lg:ml-24' : 'lg:ml-72'} flex flex-col min-h-screen transition-all duration-500 ease-in-out`}>
+      <div className={`flex-grow ${isCollapsed ? 'lg:ml-24' : 'lg:ml-72'} flex flex-col min-w-0 min-h-screen transition-all duration-500 ease-in-out`}>
         <header className="bg-white border-b border-slate-100 sticky top-0 z-40 p-4 md:p-6 flex items-center justify-between shadow-sm African-accents">
           <div className="flex items-center">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 mr-3 md:mr-4 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
@@ -5661,7 +5730,7 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <main className="p-4 lg:p-10 flex-grow">
+        <main className="p-4 lg:p-10 flex-grow min-w-0">
           <Routes>
             <Route path="/" element={
               isAdmin ? (

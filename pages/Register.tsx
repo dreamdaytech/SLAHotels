@@ -253,24 +253,41 @@ const Register: React.FC = () => {
         }, 2000);
       }
 
-      // 1. Upload Gallery Images
+      // 1. Upload Gallery Images (Sequential with Retry for AbortError)
       let galleryUrls: string[] = [];
       try {
-        galleryUrls = await Promise.all(
-          galleryImages.map(async (file) => {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `gallery/${fileName}`;
+        for (const file of galleryImages) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Math.random()}.${fileExt}`;
+          const filePath = `gallery/${fileName}`;
 
-            const { error: uploadError } = await supabase.storage
-              .from('hotel-gallery')
-              .upload(filePath, file as File);
+          let uploadSuccess = false;
+          let retries = 0;
+          const maxRetries = 2;
 
-            if (uploadError) throw uploadError;
-            const { data: { publicUrl } } = supabase.storage.from('hotel-gallery').getPublicUrl(filePath);
-            return publicUrl;
-          })
-        );
+          while (!uploadSuccess && retries <= maxRetries) {
+            try {
+              const { error: uploadError } = await supabase.storage
+                .from('hotel-gallery')
+                .upload(filePath, file as File);
+
+              if (uploadError) throw uploadError;
+
+              const { data: { publicUrl } } = supabase.storage.from('hotel-gallery').getPublicUrl(filePath);
+              galleryUrls.push(publicUrl);
+              uploadSuccess = true;
+            } catch (err: any) {
+              const isAbortError = err.name === 'AbortError' || err.message?.toLowerCase().includes('abort');
+              if (isAbortError && retries < maxRetries) {
+                console.warn(`Gallery image upload aborted. Retrying... (Attempt ${retries + 1})`);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                retries++;
+              } else {
+                throw err;
+              }
+            }
+          }
+        }
       } catch (imgError: any) {
         throw new Error('Failed to upload gallery images: ' + (imgError.message || 'Unknown error'));
       }
