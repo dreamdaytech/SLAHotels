@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { createSlug } from '../lib/utils';
+import { createSlug, formatPhoneDisplay } from '../lib/utils';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=800';
 
@@ -41,7 +41,7 @@ const Members: React.FC = () => {
         employees: parseInt(m.employees) || 0,
         website: m.website || '',
         email: m.email || '',
-        phone: m.phone || '',
+        phone: m.contact || '',
         image: (m.gallery && Array.isArray(m.gallery) && m.gallery.length > 0)
           ? m.gallery[0] : FALLBACK_IMG,
         facilities: Array.isArray(m.facilities) ? m.facilities : [],

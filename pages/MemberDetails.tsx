@@ -2,10 +2,12 @@
 import React, { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 // Added Target to imports to support promotions section
-import { MapPin, Phone, Mail, Globe, Star, Users, Calendar, Building2, CheckCircle2, ChevronLeft, Info, Briefcase, Award, Image as ImageIcon, ArrowUpRight, Target, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Phone, Mail, Globe, Star, Users, Calendar, Building2, CheckCircle2, ChevronLeft, Info, Briefcase, Award, Image as ImageIcon, ArrowUpRight, Target, ChevronDown, ChevronUp, MessageSquare, X, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
-import { createSlug } from '../lib/utils';
+import { createSlug, formatPhoneLink, formatPhoneDisplay, formatWhatsAppLink, formatWhatsAppDisplay } from '../lib/utils';
+
+
 
 const MemberDetails: React.FC = () => {
   const { slug } = useParams();
@@ -28,6 +30,7 @@ const MemberDetails: React.FC = () => {
   }, [hotel, promotions]);
 
   const [expandedPromoId, setExpandedPromoId] = useState<string | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   if (appLoading && !hotel) return (
     <div className="pt-40 pb-40 text-center text-slate-400">
@@ -47,39 +50,64 @@ const MemberDetails: React.FC = () => {
 
   return (
     <div className="bg-slate-50 min-h-screen">
+      <BookingModal 
+        isOpen={isBookingModalOpen} 
+        onClose={() => setIsBookingModalOpen(false)} 
+        hotel={hotel} 
+      />
       {/* Hero Section */}
-      <div className="relative h-[400px] md:h-[500px]">
-        <img src={hotel.image} alt={hotel.name} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
-        <div className="absolute bottom-0 left-0 w-full p-8 md:p-16">
+      <div className="relative min-h-[500px] md:h-[600px] flex flex-col">
+        <img src={hotel.image} alt={hotel.name} className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-slate-900/20"></div>
+        
+        <div className="relative flex-1 flex flex-col items-center justify-center pt-24 pb-20 px-4">
           <div className="container mx-auto px-4 md:px-8">
-            <Link to="/members" className="inline-flex items-center text-emerald-400 mb-6 hover:text-emerald-300 transition-colors">
-              <ChevronLeft size={20} className="mr-1" /> Back to Directory
+            <Link to="/members" className="inline-flex items-center text-emerald-400 mb-8 hover:text-emerald-300 transition-colors bg-slate-900/40 backdrop-blur-sm px-4 py-2 rounded-full border border-white/10 mx-auto md:mx-0">
+              <ChevronLeft size={16} className="mr-1" /> Back to Directory
             </Link>
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-              <div>
-                <div className="flex items-center space-x-2 mb-4">
-                  <span className="bg-emerald-600 text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">{hotel.type}</span>
-                  <div className="flex text-amber-400">
-                    {[...Array(parseInt(hotel.stars || 0))].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 text-center md:text-left">
+              <div className="max-w-3xl mx-auto md:mx-0">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-6">
+                  <span className="bg-emerald-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg">{hotel.type}</span>
+                  <div className="flex text-amber-400 bg-black/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/10">
+                    {[...Array(parseInt(hotel.stars || 0))].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
                   </div>
                 </div>
-                <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 tracking-tighter leading-tight">{hotel.name}</h1>
-                <div className="flex items-center text-slate-300">
+                <h1 className="text-3xl sm:text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter leading-[1.1] drop-shadow-2xl">
+                  {hotel.name}
+                </h1>
+                <div className="flex items-center justify-center md:justify-start text-slate-300">
                   <MapPin size={18} className="mr-2 text-emerald-500" />
                   {hotel.address}, {hotel.city}, {hotel.district}
                 </div>
               </div>
-              <div className="flex space-x-4">
-                <a href={`tel:${hotel.contact}`} className="p-4 bg-white/10 backdrop-blur-md rounded-2xl text-white hover:bg-white/20 transition-all border border-white/20">
-                  <Phone size={24} />
-                </a>
-                <a href={`mailto:${hotel.email}`} className="p-4 bg-white/10 backdrop-blur-md rounded-2xl text-white hover:bg-white/20 transition-all border border-white/20">
-                  <Mail size={24} />
-                </a>
-                <a href={`https://${hotel.website}`} target="_blank" rel="noreferrer" className="p-4 bg-emerald-600 rounded-2xl text-white hover:bg-emerald-700 transition-all shadow-lg">
-                  <Globe size={24} />
-                </a>
+              <div className="flex flex-col items-center md:items-end gap-5 mt-8 md:mt-0">
+                <div className="flex justify-center md:justify-start gap-4">
+                  <a href={formatPhoneLink(hotel.contact)} className="p-3 md:p-4 bg-white/10 backdrop-blur-md rounded-xl md:rounded-2xl text-white hover:bg-white/20 transition-all border border-white/20">
+                    <Phone size={20} className="md:w-6 md:h-6" />
+                  </a>
+                  <a href={`mailto:${hotel.email}`} className="p-3 md:p-4 bg-white/10 backdrop-blur-md rounded-xl md:rounded-2xl text-white hover:bg-white/20 transition-all border border-white/20">
+                    <Mail size={20} className="md:w-6 md:h-6" />
+                  </a>
+                  {hotel.whatsapp && (
+                    <a 
+                      href={formatWhatsAppLink(hotel.whatsapp)} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="p-3 md:p-4 bg-emerald-500 rounded-xl md:rounded-2xl text-white hover:bg-emerald-600 transition-all shadow-lg flex items-center justify-center"
+                      title="Chat on WhatsApp"
+                    >
+                      <MessageSquare size={20} className="md:w-6 md:h-6" />
+                    </a>
+                  )}
+                </div>
+                <button 
+                  onClick={() => setIsBookingModalOpen(true)}
+                  className="w-full md:w-auto px-8 py-4 bg-emerald-600 rounded-xl md:rounded-2xl text-white hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-900/20 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 mt-2"
+                >
+                  <Calendar size={20} />
+                  Book Now
+                </button>
               </div>
             </div>
           </div>
@@ -93,7 +121,7 @@ const MemberDetails: React.FC = () => {
           <div className="lg:col-span-2 space-y-12">
 
             {/* Overview Section */}
-            <section className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-slate-100">
+            <section className="bg-white rounded-[2rem] md:rounded-[2.5rem] p-6 sm:p-8 md:p-12 shadow-sm border border-slate-100">
               <div className="flex items-center mb-10 border-b border-slate-50 pb-6">
                 <Info className="text-emerald-600 mr-4" size={28} />
                 <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Property Profile</h2>
@@ -126,7 +154,7 @@ const MemberDetails: React.FC = () => {
 
             {/* Promotions Section (Moved up for visibility) */}
              {activePromotions.length > 0 && (
-              <section className="bg-emerald-50 rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-emerald-100">
+              <section className="bg-emerald-50 rounded-[2rem] md:rounded-[2.5rem] p-6 sm:p-8 md:p-12 shadow-sm border border-emerald-100">
                 <div className="flex items-center mb-10 border-b border-emerald-100/50 pb-6">
                   <Target className="text-emerald-600 mr-4" size={28} />
                   <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Active Promotions</h2>
@@ -187,7 +215,7 @@ const MemberDetails: React.FC = () => {
             )}
 
             {/* Facilities Section */}
-            <section className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-slate-100">
+            <section className="bg-white rounded-[2rem] md:rounded-[2.5rem] p-6 sm:p-8 md:p-12 shadow-sm border border-slate-100">
               <div className="flex items-center mb-10 border-b border-slate-50 pb-6">
                 <Award className="text-emerald-600 mr-4" size={28} />
                 <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Facilities & Excellence</h2>
@@ -220,7 +248,7 @@ const MemberDetails: React.FC = () => {
                 {hotel.amenities && (
                   <div>
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">The Atmosphere</h4>
-                    <div className="relative p-10 bg-slate-900 rounded-[2.5rem] text-white shadow-2xl overflow-hidden group">
+                    <div className="relative p-6 sm:p-10 bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] text-white shadow-2xl overflow-hidden group">
                       <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
                         <Award size={120} />
                       </div>
@@ -295,9 +323,12 @@ const MemberDetails: React.FC = () => {
                 </div>
               </div>
               <div className="mt-10 pt-10 border-t border-white/5">
-                <Link to="/contact" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-950/20">
-                  Request Partner Data <ArrowUpRight size={14} className="ml-2" />
-                </Link>
+                  <button 
+                    onClick={() => setIsBookingModalOpen(true)}
+                    className="w-full bg-emerald-600 text-white py-4 rounded-xl md:rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-950/20"
+                  >
+                    Book Your Stay Now <ArrowUpRight size={14} className="ml-2" />
+                  </button>
               </div>
             </div>
 
@@ -312,11 +343,22 @@ const MemberDetails: React.FC = () => {
                   <Phone size={16} className="text-slate-400 mt-0.5 mr-4 flex-shrink-0" />
                   <div className="min-w-0">
                     <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Telephone</span>
-                    <a href={`tel:${hotel.contact}`} className="text-sm font-bold text-slate-900 hover:text-emerald-600 transition-colors">
-                      {hotel.contact || 'Not Provided'}
+                    <a href={formatPhoneLink(hotel.contact)} className="text-sm font-bold text-slate-900 hover:text-emerald-600 transition-colors">
+                      {formatPhoneDisplay(hotel.contact) || 'Not Provided'}
                     </a>
                   </div>
                 </div>
+                {hotel.whatsapp && (
+                  <div className="flex items-start">
+                    <MessageSquare size={16} className="text-emerald-500 mt-0.5 mr-4 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">WhatsApp Number</span>
+                      <a href={formatWhatsAppLink(hotel.whatsapp)} target="_blank" rel="noreferrer" className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
+                        {formatWhatsAppDisplay(hotel.whatsapp)}
+                      </a>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-start">
                   <Mail size={16} className="text-slate-400 mt-0.5 mr-4 flex-shrink-0" />
                   <div className="min-w-0">
@@ -373,6 +415,92 @@ const MemberDetails: React.FC = () => {
 
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+const BookingModal = ({ isOpen, onClose, hotel }: { isOpen: boolean, onClose: () => void, hotel: any }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-lg rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-100 p-6 sm:p-10 relative">
+        <button onClick={onClose} className="absolute top-6 sm:top-8 right-6 sm:right-8 p-2 sm:p-3 hover:bg-slate-50 rounded-xl md:rounded-2xl transition-all border border-transparent hover:border-slate-100">
+          <X size={24} className="text-slate-400 hover:text-rose-500" />
+        </button>
+        
+        <div className="text-center mb-10">
+          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-emerald-100">
+            <Calendar size={32} />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-2">Book Your Stay</h2>
+          <p className="text-slate-500 font-bold text-sm tracking-tight uppercase">At {hotel.name}</p>
+        </div>
+
+        <div className="space-y-4">
+          {hotel.website && (
+            <a 
+              href={`https://${hotel.website}`} 
+              target="_blank" 
+              rel="noreferrer"
+              className="w-full flex items-center justify-between p-6 bg-slate-900 text-white rounded-3xl hover:bg-emerald-700 transition-all group shadow-xl shadow-slate-900/10"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-2xl group-hover:bg-white/20 transition-colors">
+                  <Globe size={20} />
+                </div>
+                <div>
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-0.5">Primary Method</span>
+                  <span className="font-bold text-base">Visit Official Website</span>
+                </div>
+              </div>
+              <ArrowUpRight size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+            </a>
+          )}
+
+          {hotel.email && (
+            <a 
+              href={`mailto:${hotel.email}`}
+              className="w-full flex items-center justify-between p-6 bg-white border border-slate-100 rounded-3xl hover:bg-slate-50 transition-all group shadow-sm"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-slate-50 group-hover:bg-white rounded-2xl border border-transparent group-hover:border-slate-100 transition-all">
+                  <Mail size={20} className="text-emerald-600" />
+                </div>
+                <div>
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Inquiry & Reservation</span>
+                  <span className="font-bold text-base text-slate-800">Direct Email</span>
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-slate-300 group-hover:text-emerald-600 transition-colors" />
+            </a>
+          )}
+
+          {hotel.whatsapp && (
+            <a 
+              href={formatWhatsAppLink(hotel.whatsapp)} 
+              target="_blank" 
+              rel="noreferrer"
+              className="w-full flex items-center justify-between p-6 bg-emerald-50 border border-emerald-100 rounded-3xl hover:bg-emerald-100 transition-all group shadow-sm"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white rounded-2xl shadow-sm">
+                  <MessageSquare size={20} className="text-emerald-600" />
+                </div>
+                <div>
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-0.5">Instant Message</span>
+                  <span className="font-bold text-base text-emerald-900">{formatWhatsAppDisplay(hotel.whatsapp)}</span>
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-emerald-300 group-hover:text-emerald-600 transition-colors" />
+            </a>
+          )}
+        </div>
+
+        <p className="text-center mt-8 text-[9px] font-black text-slate-300 uppercase tracking-widest">
+          All bookings are directly handled by the hotel secretariat.
+        </p>
       </div>
     </div>
   );

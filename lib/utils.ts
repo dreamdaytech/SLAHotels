@@ -51,3 +51,33 @@ export const createSlug = (name: string) => {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
 };
+
+export const formatPhoneLink = (number: string) => {
+    if (!number) return '';
+    let digits = number.replace(/\D/g, '');
+    if (digits.startsWith('0')) digits = '232' + digits.substring(1);
+    else if (digits.length === 8) digits = '232' + digits;
+    return `tel:+${digits}`;
+};
+
+export const formatPhoneDisplay = (number: string) => {
+    if (!number) return '';
+    let digits = number.replace(/\D/g, '');
+    if (digits.startsWith('0')) digits = '232' + digits.substring(1);
+    else if (digits.length === 8) digits = '232' + digits;
+
+    if (digits.startsWith('232')) {
+        return `+232 ${digits.substring(3, 5)} ${digits.substring(5)}`;
+    }
+    return `+${digits}`;
+};
+
+export const formatWhatsAppLink = (number: string) => {
+    if (!number) return '';
+    let digits = number.replace(/\D/g, '');
+    if (digits.startsWith('0')) digits = '232' + digits.substring(1);
+    else if (digits.length === 8) digits = '232' + digits;
+    return `https://wa.me/${digits}`;
+};
+
+export const formatWhatsAppDisplay = (number: string) => formatPhoneDisplay(number);

@@ -14,7 +14,7 @@ import {
 import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
-import { isProfileComplete, createSlug } from '../lib/utils';
+import { isProfileComplete, createSlug, formatPhoneDisplay } from '../lib/utils';
 
 // --- Dashboard Sub-Components ---
 
@@ -255,7 +255,11 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
               </div>
               <div>
                 <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Contact Number</label>
-                <p className="font-bold text-slate-700">{app.contact}</p>
+                <p className="font-bold text-slate-700">{formatPhoneDisplay(app.contact)}</p>
+              </div>
+              <div>
+                <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">WhatsApp Number</label>
+                <p className="font-bold text-emerald-600">{formatPhoneDisplay(app.whatsapp) || '—'}</p>
               </div>
               <div>
                 <label className="block text-[8px] font-black text-slate-400 uppercase mb-2">Official Website</label>
@@ -597,6 +601,7 @@ const ApplicationDetail = () => {
     hotelName: raw.hotel_name,
     date: new Date(raw.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
     regNumber: raw.reg_number,
+    whatsapp: raw.whatsapp,
     year: raw.year_established?.toString(),
     roomTypes: raw.room_types,
     otherAmenities: raw.other_amenities,
@@ -4209,6 +4214,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
   const [contact, setContact] = useState('');
   const [countryCode, setCountryCode] = useState('+232');
   const [contactLocal, setContactLocal] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [website, setWebsite] = useState('');
 
   // Section B: Ownership
@@ -4265,6 +4271,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
       setContactLocal(storedContact);
     }
     setContact(storedContact)
+    setWhatsapp(hotel.whatsapp || '');
     setWebsite(hotel.website || '');
     setOwner(hotel.owner || '');
     setManager(hotel.manager || '');
@@ -4379,6 +4386,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
       const payload = {
         hotel_name: hotelName,
         address, city, district, email: hotelEmail || email, contact, website,
+        whatsapp,
         owner, manager, reg_number: regNumber,
         year_established: year ? parseInt(year) : null,
         employees: employees ? parseInt(employees) : null,
@@ -4488,6 +4496,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
                 ))}
               </select>
             </div>
+            
             <div className="md:col-span-2">
               <label className="block text-sm font-bold text-slate-600 mb-2">Official Contact Number *</label>
               <div className="flex rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 bg-slate-50">
@@ -4496,7 +4505,24 @@ const ProfileEdit = ({ user }: { user: any }) => {
                 </select>
                 <input required type="tel" placeholder="76 123456" value={contactLocal} onChange={(e) => { const d = e.target.value.replace(/[^0-9 \-]/g, ''); setContactLocal(d); setContact(countryCode + ' ' + d); }} className="flex-1 bg-transparent px-4 py-3 outline-none text-sm" />
               </div>
+              <p className="text-[10px] text-slate-400 mt-1 italic">Please ensure your contact number includes the country code above.</p>
             </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-bold text-slate-600 mb-2">WhatsApp Number</label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="tel"
+                  placeholder="e.g. +232 76 123456"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 italic">Please include the international format (e.g., +232 76 123 456).</p>
+            </div>
+
             <div className="md:col-span-2">
               <label className="block text-sm font-bold text-slate-600 mb-2">Hotel Public Contact Email</label>
               <div className="relative">
@@ -4505,7 +4531,14 @@ const ProfileEdit = ({ user }: { user: any }) => {
               </div>
               <p className="text-[10px] text-slate-400 mt-1 font-medium">Public-facing contact email for your hotel listing.</p>
             </div>
-            <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Website (If Any)</label><div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="url" placeholder="www.yourhotel.sl" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div></div>
+            
+            <div className="md:col-span-2">
+              <label className="block text-sm font-bold text-slate-600 mb-2">Website (If Any)</label>
+              <div className="relative">
+                <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input type="url" placeholder="www.yourhotel.sl" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" />
+              </div>
+            </div>
           </div>
         </section>
 

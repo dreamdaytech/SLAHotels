@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, CheckCircle2, Star, Hotel, FileCheck, Landmark, ClipboardList, Image as ImageIcon, X, UploadCloud, Plus, Globe, Users, Building2, Scale, FileBadge, FileSignature, CheckSquare, Lock, Mail, UserPlus, ArrowRight, Loader2, AlertTriangle, LogIn, Clock, LogOut, FileText, Eye, Trash2, Check } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Star, Hotel, FileCheck, Landmark, ClipboardList, Image as ImageIcon, X, UploadCloud, Plus, Globe, Users, Building2, Scale, FileBadge, FileSignature, CheckSquare, Lock, Mail, UserPlus, ArrowRight, Loader2, AlertTriangle, LogIn, Clock, LogOut, FileText, Eye, Trash2, Check, Phone } from 'lucide-react';
 import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
@@ -60,6 +60,7 @@ const Register: React.FC = () => {
   const [contact, setContact] = useState('');
   const [countryCode, setCountryCode] = useState('+232');
   const [contactLocal, setContactLocal] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [website, setWebsite] = useState('');
   const [owner, setOwner] = useState('');
   const [manager, setManager] = useState('');
@@ -185,6 +186,7 @@ const Register: React.FC = () => {
         setContact('');
         setContactLocal('');
       }
+      setWhatsapp(userHotel.whatsapp || '');
       setWebsite(userHotel.website || '');
       setOwner(userHotel.owner || '');
       setManager(userHotel.manager || '');
@@ -321,6 +323,7 @@ const Register: React.FC = () => {
         district,
         email: hotelEmail || email || user?.email || accountEmail,
         contact,
+        whatsapp,
         website,
         owner,
         manager,
@@ -686,6 +689,7 @@ const Register: React.FC = () => {
                       const digits = e.target.value.replace(/[^0-9 \-]/g, '');
                       setContactLocal(digits);
                       setContact(countryCode + ' ' + digits);
+                      if (e.target.value.trim()) setErrors(prev => ({ ...prev, contactLocal: '' }));
                     }}
                     pattern="[0-9 \-]{5,15}"
                     title="Enter between 5 and 15 digits (spaces and hyphens allowed)"
@@ -695,6 +699,24 @@ const Register: React.FC = () => {
                 <p className="text-[10px] text-slate-400 mt-1.5 font-medium">Digits only · 5–15 characters · e.g. {countryCode} 76 123456</p>
                 {errors.contactLocal && <p className="text-rose-500 text-xs mt-1 font-medium">{errors.contactLocal}</p>}
               </div>
+
+              <div className="md:col-span-2" id="field-whatsapp">
+                <label className="block text-sm font-bold text-slate-600 mb-2">WhatsApp Number</label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Phone size={18} />
+                  </div>
+                  <input
+                    type="tel"
+                    placeholder="e.g. +232 76 123456"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-slate-50"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 italic">Please include the international format (e.g., +232 76 123 456).</p>
+              </div>
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-bold text-slate-600 mb-2">Hotel Public Contact Email</label>
                 <div className="relative">
