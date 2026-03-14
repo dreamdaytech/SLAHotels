@@ -791,7 +791,10 @@ const Register: React.FC = () => {
               </div>
               <div className="space-y-8">
                 <div>
-                  <label className="block text-sm font-bold text-slate-600 mb-4">Hotel Classification (★ rating) *</label>
+                  <label className="block text-sm font-bold text-slate-600 mb-2">Hotel Classification (Rating) *</label>
+                  <p className="text-slate-500 text-xs mb-4 leading-relaxed italic">
+                    Select your hotel classification according to the National Tourist Board rating system. A rating of 1 represents the highest standard, while 5 represents the lowest classification.
+                  </p>
                   <div className="flex flex-wrap gap-4">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <label key={star} className="flex items-center space-x-2 cursor-pointer group">
