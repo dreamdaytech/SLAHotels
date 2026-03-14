@@ -4639,8 +4639,13 @@ const ProfileEdit = ({ user }: { user: any }) => {
 
 
 function MemberOverview({ user }: { user: any }) {
-  const { userHotel, userHotelLoading, activities } = useAppContext();
+  const { userHotel, userHotelLoading, activities, promotions } = useAppContext();
   const navigate = useNavigate();
+
+  const activePromotions = useMemo(() => {
+    if (!userHotel || !promotions) return [];
+    return promotions.filter((p: any) => p.hotel_id === userHotel.id && p.status === 'Active');
+  }, [userHotel, promotions]);
 
   if (userHotelLoading) return (
     <div className="p-20 text-center animate-pulse">
@@ -4851,6 +4856,59 @@ function MemberOverview({ user }: { user: any }) {
           </Link>
         </div>
       </div>
+
+      {activePromotions.length > 0 && (
+        <div className="bg-emerald-50 rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-emerald-100 mt-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500 rounded-full -mr-32 -mt-32 opacity-10"></div>
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 border-b border-emerald-100/50 pb-6">
+            <div className="flex items-center">
+              <span className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mr-4 shadow-sm">
+                <Target className="text-emerald-600" size={24} />
+              </span>
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tight">Active Promotions</h2>
+                <p className="text-emerald-700 font-medium text-sm">Currently visible on your public profile</p>
+              </div>
+            </div>
+            <Link to="/dashboard/promotions" className="bg-white text-emerald-700 px-6 py-3 rounded-xl font-bold text-[10px] hover:bg-emerald-600 hover:text-white transition-all uppercase tracking-widest shadow-sm">
+              Manage Promos
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+            {activePromotions.map((promo: any) => (
+              <div key={promo.id} className="bg-white p-6 rounded-3xl border border-emerald-100 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition-colors">
+                <div className="absolute top-4 right-4 z-10">
+                  <span className="inline-flex items-center px-3 py-1 bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase tracking-widest rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+                    Live
+                  </span>
+                </div>
+                <div className="relative z-10">
+                  <h4 className="text-lg font-bold text-slate-900 mb-2 leading-tight pr-16">{promo.title}</h4>
+                  <p className="text-sm text-slate-500 mb-4 line-clamp-2">{promo.description}</p>
+                  
+                  {(promo.discount_code || promo.discount_value) && (
+                    <div className="flex gap-2">
+                       {promo.discount_code && (
+                         <div className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 flex items-center gap-2 flex-1">
+                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Code</span>
+                           <span className="font-mono text-xs font-bold text-slate-800">{promo.discount_code}</span>
+                         </div>
+                       )}
+                       {promo.discount_value && (
+                         <div className="bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-2 flex-1">
+                           <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Discount</span>
+                           <span className="text-xs font-bold text-emerald-800">{promo.discount_value}</span>
+                         </div>
+                       )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -5557,6 +5615,296 @@ const NotificationsView = ({ user }: { user: any }) => {
   );
 };
 
+// --- Promotions Management Component ---
+
+const PromotionsManagement = () => {
+  const { user, userHotel, promotions, refreshData, showNotification } = useAppContext();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [formPromo, setFormPromo] = useState({
+    title: '', description: '', discount_code: '', discount_value: '', valid_from: '', valid_until: '', status: 'Active', image: ''
+  });
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info' | 'success';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    variant: 'warning'
+  });
+
+  const askConfirm = (title: string, message: string, onConfirm: () => void, variant: 'danger' | 'warning' | 'info' | 'success' = 'warning') => {
+    setConfirmModal({ isOpen: true, title, message, onConfirm, variant });
+  };
+
+  const initialForm = { title: '', description: '', discount_code: '', discount_value: '', valid_from: '', valid_until: '', status: 'Active', image: '' };
+
+  const isSuperAdmin = user?.role === 'super-admin' || user?.role === 'admin';
+  const myPromotions = isSuperAdmin 
+    ? promotions 
+    : promotions.filter(p => p.hotel_id === userHotel?.id);
+
+  const handleSave = async (e: React.FormEvent | React.MouseEvent) => {
+    e.preventDefault();
+    if (!formPromo.title.trim() || !formPromo.description.trim()) {
+      showNotification('Please provide a title and description for this promotion.', 'error');
+      return;
+    }
+
+    if (!isSuperAdmin && !userHotel) {
+      showNotification('No verified property found to attach this promotion to.', 'error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let hotel_id_to_save = userHotel?.id;
+      if (isSuperAdmin && editingId) {
+        const existing = promotions.find(p => p.id === editingId);
+        hotel_id_to_save = existing?.hotel_id;
+      } else if (isSuperAdmin && !editingId) {
+        showNotification('Admins cannot create generic promotions yet.', 'error');
+        return;
+      }
+
+      const entryToSave = {
+        ...formPromo,
+        hotel_id: hotel_id_to_save
+      };
+
+      if (editingId) {
+        const { error } = await supabase.from('promotions').update(entryToSave).eq('id', editingId);
+        if (error) throw error;
+        await supabase.from('activities').insert({ type: 'update', text: `Updated promotion: "${formPromo.title}"` });
+        showNotification('Promotion updated successfully!', 'success');
+      } else {
+        const { error } = await supabase.from('promotions').insert([entryToSave]);
+        if (error) throw error;
+        await supabase.from('activities').insert({ type: 'update', text: `Launched new promotion: "${formPromo.title}"` });
+        showNotification('Promotion launched successfully!', 'success');
+      }
+      refreshData();
+      setShowAddForm(false);
+      setEditingId(null);
+      setFormPromo(initialForm);
+    } catch (err: any) {
+      showNotification(err.message || 'Error saving promotion', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    askConfirm(
+      'Delete Promotion?',
+      'Are you sure you want to permanently delete this promotional offer? It will be removed from your public profile instantly.',
+      async () => {
+        try {
+          const { error } = await supabase.from('promotions').delete().eq('id', id);
+          if (error) throw error;
+          await supabase.from('activities').insert({ type: 'update', text: `Deleted promotion` });
+          refreshData();
+          showNotification('Promotion deleted.', 'success');
+        } catch (err: any) {
+          showNotification(err.message, 'error');
+        }
+      },
+      'danger'
+    );
+  };
+
+  const openEdit = (promo: any) => {
+    setEditingId(promo.id);
+    setFormPromo({ ...promo });
+    setShowAddForm(true);
+  };
+
+  const openDuplicate = (promo: any) => {
+    setEditingId(null); // Explicitly reset editing state so saving creates a new row
+    const { id, created_at, updated_at, ...rest } = promo;
+    setFormPromo({ ...rest, title: `${promo.title} (Copy)` });
+    setShowAddForm(true);
+  };
+
+  return (
+    <div className="space-y-8">
+      {showAddForm ? (
+        <div className="bg-white rounded-3xl p-10 shadow-xl border border-slate-100">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl font-bold">{editingId ? 'Edit Promotion' : 'Create Promotion'}</h2>
+            <button onClick={() => { setShowAddForm(false); setEditingId(null); }} className="p-2 hover:bg-slate-100 rounded-full"><X /></button>
+          </div>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="md:col-span-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Offer Title</label>
+                  <span className={`text-[10px] font-bold ${formPromo.title.length >= 70 ? 'text-rose-500' : 'text-slate-400'}`}>
+                    {formPromo.title.length}/80
+                  </span>
+                </div>
+                <input
+                  value={formPromo.title}
+                  maxLength={80}
+                  onChange={e => setFormPromo({ ...formPromo, title: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-emerald-400 transition-colors"
+                  placeholder="e.g. Summer Special Package"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Discount Code</label>
+                <input value={formPromo.discount_code || ''} onChange={e => setFormPromo({ ...formPromo, discount_code: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none" placeholder="e.g. SUMMER2024" />
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Discount Value</label>
+                  <span className={`text-[10px] font-bold ${(formPromo.discount_value || '').length >= 25 ? 'text-rose-500' : 'text-slate-400'}`}>
+                    {(formPromo.discount_value || '').length}/30
+                  </span>
+                </div>
+                <input
+                  value={formPromo.discount_value || ''}
+                  maxLength={30}
+                  onChange={e => setFormPromo({ ...formPromo, discount_value: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-emerald-400 transition-colors"
+                  placeholder="e.g. 20% OFF or $50 OFF"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Valid From</label>
+                <input type="date" value={formPromo.valid_from || ''} onChange={e => setFormPromo({ ...formPromo, valid_from: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Valid Until</label>
+                <input type="date" value={formPromo.valid_until || ''} onChange={e => setFormPromo({ ...formPromo, valid_until: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Status</label>
+                <select value={formPromo.status} onChange={e => setFormPromo({ ...formPromo, status: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none">
+                  <option value="Active">Active</option>
+                  <option value="Expired">Expired</option>
+                  <option value="Draft">Draft</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Description / Terms</label>
+                  <span className={`text-[10px] font-bold ${formPromo.description.length >= 450 ? 'text-rose-500' : 'text-slate-400'}`}>
+                    {formPromo.description.length}/500
+                  </span>
+                </div>
+                <textarea
+                  rows={4}
+                  maxLength={500}
+                  value={formPromo.description}
+                  onChange={e => setFormPromo({ ...formPromo, description: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none resize-none focus:border-emerald-400 transition-colors"
+                  placeholder="Describe the promotion, terms and conditions..."
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={submitting}
+              className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg uppercase tracking-widest text-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {submitting && <Loader2 size={14} className="animate-spin" />}
+              {submitting ? 'Saving...' : editingId ? 'Update Promotion' : 'Publish Offer'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100">
+          <div className="p-4 md:p-8 border-b border-slate-50 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg md:text-xl font-bold text-slate-900">Promotions & Discounts</h2>
+              <p className="text-slate-500 text-xs md:text-sm">Manage your promotional offers</p>
+            </div>
+            <button onClick={() => { setFormPromo(initialForm); setShowAddForm(true); setEditingId(null); }} className="bg-emerald-600 text-white px-5 py-2 rounded-xl font-bold text-sm flex items-center shadow-lg">
+              <Plus size={16} className="mr-2" /> New Offer
+            </button>
+          </div>
+          <div>
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                <tr>
+                  <th className="px-8 py-4">Offer Details</th>
+                  <th className="px-8 py-4">Value</th>
+                  <th className="px-8 py-4">Validity</th>
+                  <th className="px-8 py-4">Status</th>
+                  <th className="px-8 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {myPromotions.map((promo: any) => (
+                  <tr key={promo.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-8 py-5">
+                      <div className="font-bold text-slate-900 text-sm">{promo.title}</div>
+                      <div className="text-[10px] text-slate-400 font-bold mt-1">CODE: {promo.discount_code || 'N/A'}</div>
+                    </td>
+                    <td className="px-8 py-5 text-sm text-emerald-600 font-black">{promo.discount_value || 'None'}</td>
+                    <td className="px-8 py-5 text-xs text-slate-500">
+                      <div>{promo.valid_from ? new Date(promo.valid_from).toLocaleDateString() : 'Always'} - </div>
+                      <div>{promo.valid_until ? new Date(promo.valid_until).toLocaleDateString() : 'No Expiry'}</div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${promo.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : promo.status === 'Draft' ? 'bg-slate-100 text-slate-500' : 'bg-rose-100 text-rose-700'}`}>
+                        {promo.status}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5 text-right relative">
+                      <button onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === promo.id ? null : promo.id); }} className="p-2 text-slate-400 hover:text-emerald-600 rounded-lg">
+                        <MoreVertical size={18} />
+                      </button>
+                      {openMenuId === promo.id && (
+                        <div className="absolute right-12 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 text-left">
+                          <button onClick={() => { openEdit(promo); setOpenMenuId(null); }} className="w-full px-6 py-3 text-left text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 flex items-center">
+                            <Edit3 size={16} className="mr-3" /> Edit
+                          </button>
+                          <button onClick={() => { openDuplicate(promo); setOpenMenuId(null); }} className="w-full px-6 py-3 text-left text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 flex items-center">
+                            <Copy size={16} className="mr-3" /> Duplicate
+                          </button>
+                          <button onClick={() => { handleDelete(promo.id); setOpenMenuId(null); }} className="w-full px-6 py-3 text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center">
+                            <Trash2 size={16} className="mr-3" /> Delete
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {myPromotions.length === 0 && (
+              <div className="py-20 text-center">
+                <Target size={32} className="mx-auto mb-2 text-slate-200" />
+                <p className="text-xs text-slate-400">No promotional offers created yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+      />
+    </div>
+  );
+};
+
 // --- Main Dashboard Component ---
 
 export default function Dashboard() {
@@ -5604,6 +5952,7 @@ export default function Dashboard() {
     },
     { name: 'Members', path: '/dashboard/members', icon: <Hotel size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Events', path: '/dashboard/events', icon: <Calendar size={20} />, roles: ['super-admin', 'admin', 'member'] },
+    { name: 'Promotions', path: '/dashboard/promotions', icon: <Target size={20} />, roles: ['super-admin', 'admin', 'member'] },
     { name: 'News', path: '/dashboard/news', icon: <Newspaper size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Users', path: '/dashboard/users', icon: <Users size={20} />, roles: ['super-admin', 'admin'] },
     {
@@ -5813,6 +6162,7 @@ export default function Dashboard() {
             <Route path="/applications/:id" element={<ApplicationDetail />} />
             <Route path="/members" element={<MembersManagement />} />
             <Route path="/events" element={<EventsManagement />} />
+            <Route path="/promotions" element={<PromotionsManagement />} />
             <Route path="/news" element={<NewsManagement />} />
             <Route path="/users" element={<UserManagement />} />
             <Route path="/logs" element={<ActivityLogs />} />

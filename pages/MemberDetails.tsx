@@ -1,14 +1,14 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-// Added Image as ImageIcon and ArrowUpRight to imports to fix missing component errors
-import { MapPin, Phone, Mail, Globe, Star, Users, Calendar, Building2, CheckCircle2, ChevronLeft, Info, Briefcase, Award, Image as ImageIcon, ArrowUpRight } from 'lucide-react';
+// Added Target to imports to support promotions section
+import { MapPin, Phone, Mail, Globe, Star, Users, Calendar, Building2, CheckCircle2, ChevronLeft, Info, Briefcase, Award, Image as ImageIcon, ArrowUpRight, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
 
 const MemberDetails: React.FC = () => {
   const { id } = useParams();
-  const { hotels, loading: appLoading } = useAppContext();
+  const { hotels, promotions, loading: appLoading } = useAppContext();
 
   const hotel = useMemo(() => {
     const found = hotels.find(h => h.id === id);
@@ -20,6 +20,13 @@ const MemberDetails: React.FC = () => {
       image: (found.gallery && found.gallery.length > 0) ? found.gallery[0] : 'https://images.unsplash.com/photo-1551882547-ff43c63fedfe?auto=format&fit=crop&q=80&w=1200'
     };
   }, [hotels, id]);
+
+  const activePromotions = useMemo(() => {
+    if (!hotel || !promotions) return [];
+    return promotions.filter(p => p.hotel_id === hotel.id && p.status === 'Active');
+  }, [hotel, promotions]);
+
+  const [expandedPromoId, setExpandedPromoId] = useState<string | null>(null);
 
   if (appLoading && !hotel) return (
     <div className="pt-40 pb-40 text-center text-slate-400">
@@ -116,35 +123,64 @@ const MemberDetails: React.FC = () => {
               </div>
             </section>
 
-            {/* Gallery Section */}
-            {hotel.gallery && hotel.gallery.length > 0 && (
-              <section className="space-y-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-center">
-                    <ImageIcon className="text-emerald-600 mr-4" size={28} />
-                    <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Hotel Gallery</h2>
-                  </div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">
-                    {hotel.gallery.length} Verified Photos
-                  </span>
+            {/* Promotions Section (Moved up for visibility) */}
+             {activePromotions.length > 0 && (
+              <section className="bg-emerald-50 rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-emerald-100">
+                <div className="flex items-center mb-10 border-b border-emerald-100/50 pb-6">
+                  <Target className="text-emerald-600 mr-4" size={28} />
+                  <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Active Promotions</h2>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                  {hotel.gallery.map((img: string, idx: number) => (
-                    <div
-                      key={idx}
-                      className={`relative rounded-[2rem] overflow-hidden shadow-md border border-white group cursor-pointer ${idx === 0 ? 'md:col-span-2 md:row-span-2 aspect-video' : 'aspect-square'
-                        }`}
-                    >
-                      <img
-                        src={img}
-                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                        alt={`${hotel.name} Gallery ${idx + 1}`}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
-                        <p className="text-white text-[10px] font-black uppercase tracking-widest">View Image</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {activePromotions.map((promo: any) => {
+                    const isExpanded = expandedPromoId === promo.id;
+                    return (
+                      <div
+                        key={promo.id}
+                        onClick={() => setExpandedPromoId(isExpanded ? null : promo.id)}
+                        className="bg-white p-6 rounded-3xl border border-emerald-100 shadow-sm relative overflow-hidden group cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all"
+                      >
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500 rounded-bl-[4rem] flex items-start justify-end p-4 z-0 transition-transform group-hover:scale-110">
+                          <Star className="text-white w-6 h-6 animate-pulse" fill="currentColor" />
+                        </div>
+                        <div className="relative z-10">
+                          <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-full mb-4">
+                            {promo.discount_value || 'Special Offer'}
+                          </span>
+                          <h4 className="text-lg font-bold text-slate-900 mb-2 leading-tight">{promo.title}</h4>
+
+                          {/* Description — truncated by default, full when expanded */}
+                          <p className={`text-sm text-slate-500 whitespace-pre-line transition-all duration-300 ${isExpanded ? 'mb-6' : 'line-clamp-2 mb-3'}`}>
+                            {promo.description}
+                          </p>
+
+                          {/* Read more toggle */}
+                          <button
+                            onClick={e => { e.stopPropagation(); setExpandedPromoId(isExpanded ? null : promo.id); }}
+                            className="flex items-center gap-1 text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:text-emerald-800 transition-colors mb-4"
+                          >
+                            {isExpanded ? <><ChevronUp size={12} /> Show Less</> : <><ChevronDown size={12} /> Read More</>}
+                          </button>
+
+                          {(promo.discount_code || promo.valid_until) && (
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                              {promo.discount_code && (
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Code</span>
+                                  <span className="font-mono text-xs font-bold bg-white px-2 py-1 rounded border border-slate-200 text-slate-800">{promo.discount_code}</span>
+                                </div>
+                              )}
+                              {promo.valid_until && (
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Expires</span>
+                                  <span className="text-xs font-bold text-slate-600">{new Date(promo.valid_until).toLocaleDateString()}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -203,6 +239,39 @@ const MemberDetails: React.FC = () => {
               </div>
             </section>
 
+            {/* Gallery Section */}
+            {hotel.gallery && hotel.gallery.length > 0 && (
+              <section className="space-y-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center">
+                    <ImageIcon className="text-emerald-600 mr-4" size={28} />
+                    <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Hotel Gallery</h2>
+                  </div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">
+                    {hotel.gallery.length} Verified Photos
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                  {hotel.gallery.map((img: string, idx: number) => (
+                    <div
+                      key={idx}
+                      className={`relative rounded-[2rem] overflow-hidden shadow-md border border-white group cursor-pointer ${idx === 0 ? 'md:col-span-2 md:row-span-2 aspect-video' : 'aspect-square'
+                        }`}
+                    >
+                      <img
+                        src={img}
+                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                        alt={`${hotel.name} Gallery ${idx + 1}`}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
+                        <p className="text-white text-[10px] font-black uppercase tracking-widest">View Image</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
           </div>
 
           {/* Sidebar Column */}
@@ -228,6 +297,45 @@ const MemberDetails: React.FC = () => {
                 <Link to="/contact" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-950/20">
                   Request Partner Data <ArrowUpRight size={14} className="ml-2" />
                 </Link>
+              </div>
+            </div>
+
+            {/* Contact Details Card */}
+            <div className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-sm">
+              <div className="flex items-center mb-8 text-emerald-600">
+                <Phone size={20} className="mr-3" />
+                <h3 className="text-xs font-black uppercase tracking-[0.2em]">Contact Information</h3>
+              </div>
+              <div className="space-y-6">
+                <div className="flex items-start">
+                  <Phone size={16} className="text-slate-400 mt-0.5 mr-4 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Telephone</span>
+                    <a href={`tel:${hotel.contact}`} className="text-sm font-bold text-slate-900 hover:text-emerald-600 transition-colors">
+                      {hotel.contact || 'Not Provided'}
+                    </a>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <Mail size={16} className="text-slate-400 mt-0.5 mr-4 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Email Address</span>
+                    <a href={`mailto:${hotel.email}`} className="text-sm font-bold text-slate-900 hover:text-emerald-600 transition-colors truncate block max-w-full">
+                      {hotel.email || 'Not Provided'}
+                    </a>
+                  </div>
+                </div>
+                {hotel.website && (
+                  <div className="flex items-start">
+                    <Globe size={16} className="text-slate-400 mt-0.5 mr-4 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Website URL</span>
+                      <a href={`https://${hotel.website}`} target="_blank" rel="noreferrer" className="text-sm font-bold text-slate-900 hover:text-emerald-600 transition-colors truncate block max-w-full">
+                        {hotel.website}
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

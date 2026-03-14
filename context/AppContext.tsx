@@ -16,6 +16,7 @@ interface AppContextType {
   news: any[];
   events: any[];
   activities: any[];
+  promotions: any[];
   loading: boolean;
   notification: Notification | null;
   showNotification: (message: string, type: Notification['type']) => void;
@@ -38,6 +39,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [news, setNews] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [promotions, setPromotions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userHotel, setUserHotel] = useState<any | null>(null);
   const [userHotelLoading, setUserHotelLoading] = useState(false);
@@ -66,6 +68,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const hotelsRes = await supabase.from('hotels').select('*').order('hotel_name', { ascending: true });
       const profilesRes = await supabase.from('profiles').select('*');
       const activitiesRes = await supabase.from('activities').select('*').order('created_at', { ascending: false });
+      const promotionsRes = await supabase.from('promotions').select('*').order('created_at', { ascending: false });
 
       if (newsRes.data) setNews(newsRes.data);
       if (eventsRes.data) setEvents(eventsRes.data);
@@ -81,6 +84,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       if (profilesRes.data) setProfiles(profilesRes.data);
       if (activitiesRes.data) setActivities(activitiesRes.data);
+      if (promotionsRes.data) setPromotions(promotionsRes.data);
 
       // Update userHotel if user is logged in
       try {
@@ -263,6 +267,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         news,
         events,
         activities,
+        promotions,
         loading,
         userHotel,
         userHotelLoading,

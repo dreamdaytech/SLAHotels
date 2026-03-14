@@ -274,9 +274,10 @@ const Members: React.FC = () => {
         {processedMembers.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {processedMembers.map((hotel, idx) => (
-              <div
+              <Link
+                to={`/members/${hotel.id}`}
                 key={hotel.id}
-                className={`group bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 flex flex-col ${idx === 0 && processedMembers.length >= 3 ? 'md:col-span-2 xl:col-span-1' : ''}`}
+                className={`group bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 flex flex-col block ${idx === 0 && processedMembers.length >= 3 ? 'md:col-span-2 xl:col-span-1' : ''}`}
               >
                 {/* Hero image */}
                 <div className="relative h-64 overflow-hidden">
@@ -367,15 +368,14 @@ const Members: React.FC = () => {
                   )}
 
                   {/* CTA */}
-                  <Link
-                    to={`/members/${hotel.id}`}
-                    className="mt-auto flex items-center justify-between w-full py-4 px-7 bg-slate-900 text-white hover:bg-emerald-700 rounded-2xl transition-all font-black text-[10px] uppercase tracking-[0.2em] group/btn shadow-lg"
+                  <div
+                    className="mt-auto flex items-center justify-between w-full py-4 px-7 bg-slate-900 text-white group-hover:bg-emerald-700 rounded-2xl transition-all font-black text-[10px] uppercase tracking-[0.2em] shadow-lg"
                   >
                     View Full Profile
-                    <ChevronRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
-                  </Link>
+                    <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (
