@@ -5,13 +5,14 @@ import { useParams, Link } from 'react-router-dom';
 import { MapPin, Phone, Mail, Globe, Star, Users, Calendar, Building2, CheckCircle2, ChevronLeft, Info, Briefcase, Award, Image as ImageIcon, ArrowUpRight, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
+import { createSlug } from '../lib/utils';
 
 const MemberDetails: React.FC = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const { hotels, promotions, loading: appLoading } = useAppContext();
 
   const hotel = useMemo(() => {
-    const found = hotels.find(h => h.id === id);
+    const found = hotels.find(h => createSlug(h.hotel_name) === slug);
     if (!found) return null;
     return {
       ...found,
@@ -19,7 +20,7 @@ const MemberDetails: React.FC = () => {
       year: found.year_established?.toString() || 'N/A',
       image: (found.gallery && found.gallery.length > 0) ? found.gallery[0] : 'https://images.unsplash.com/photo-1551882547-ff43c63fedfe?auto=format&fit=crop&q=80&w=1200'
     };
-  }, [hotels, id]);
+  }, [hotels, slug]);
 
   const activePromotions = useMemo(() => {
     if (!hotel || !promotions) return [];

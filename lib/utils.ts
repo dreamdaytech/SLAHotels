@@ -38,9 +38,16 @@ export const isProfileComplete = (hotel: any) => {
     if (!hotel.gallery || hotel.gallery.length === 0) {
         missing.push('At least one gallery image (Section F)');
     }
-
     return {
         complete: missing.length === 0,
         missing
     };
+};
+
+export const createSlug = (name: string) => {
+    if (!name) return '';
+    return name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
 };

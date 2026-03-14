@@ -21,6 +21,7 @@ import { SLAHLogo } from './Logo';
 import { supabase } from './lib/supabase';
 
 import { AppProvider, useAppContext } from './context/AppContext';
+import { createSlug } from './lib/utils'; // Added this import based on the instruction's context
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -319,7 +320,7 @@ const AppContent = () => {
           <Route path="/about" element={<About />} />
           <Route path="/about/secretariat" element={<Secretariat />} />
           <Route path="/members" element={<Members />} />
-          <Route path="/members/:id" element={<MemberDetails />} />
+          <Route path="/members/:slug" element={<MemberDetails />} />
           <Route path="/events" element={<Events />} />
           <Route path="/events/:id" element={<EventDetails />} />
           <Route path="/advocacy" element={<Advocacy />} />

@@ -14,7 +14,7 @@ import {
 import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
-import { isProfileComplete } from '../lib/utils';
+import { isProfileComplete, createSlug } from '../lib/utils';
 
 // --- Dashboard Sub-Components ---
 
@@ -2027,7 +2027,7 @@ const MembersManagement = () => {
                       {
                         label: 'View Profile',
                         icon: <Eye size={14} />,
-                        onClick: () => navigate(`/members/${member.id}`)
+                        onClick: () => navigate(`/members/${createSlug(member.hotelName)}`)
                       },
                       {
                         label: member.status === 'pending' ? 'Approve Membership' : 'Mark as Approved',

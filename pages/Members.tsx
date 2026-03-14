@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import { createSlug } from '../lib/utils';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=800';
 
@@ -275,7 +276,7 @@ const Members: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {processedMembers.map((hotel, idx) => (
               <Link
-                to={`/members/${hotel.id}`}
+                to={`/members/${createSlug(hotel.name)}`}
                 key={hotel.id}
                 className={`group bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 flex flex-col block ${idx === 0 && processedMembers.length >= 3 ? 'md:col-span-2 xl:col-span-1' : ''}`}
               >
