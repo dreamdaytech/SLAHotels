@@ -147,8 +147,10 @@ export default function Login() {
           setView('update');
           setLoading(false);
         } else {
+          // SYNC-FIRST: Set global user state immediately for instant redirection
+          setUser(userData);
           showNotification('Login successful!', 'success');
-          navigate('/dashboard');
+          navigate('/dashboard', { replace: true });
         }
       }
     } catch (err: any) {
