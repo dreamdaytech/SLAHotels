@@ -5144,6 +5144,7 @@ function SettingsView({ user }: { user: any }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const { refreshData, showNotification, setUser } = useAppContext();
+  const navigate = useNavigate();
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -5194,12 +5195,11 @@ function SettingsView({ user }: { user: any }) {
 
       showNotification('Success! Your account is now protected with your new password. Please sign in again.', 'success');
       
-      // Logout and redirect
-      setTimeout(async () => {
-        localStorage.removeItem('slah_auth');
-        await supabase.auth.signOut();
-        window.location.href = '/#/login';
-      }, 2000);
+      // Logout and redirect immediately
+      setUser(null);
+      localStorage.removeItem('slah_auth');
+      await supabase.auth.signOut();
+      navigate('/login', { replace: true });
     } catch (err: any) {
       console.error('Settings password update error:', err);
       setError(err.message || 'Failed to update password');
