@@ -10,7 +10,7 @@ import {
   Image as ImageIcon, Globe, Award, ChevronRight, FileCheck, Check, ChevronUp, ChevronDown,
   MoreHorizontal, MoreVertical, History, Filter, Phone, Scale, FileBadge, FileSignature, CheckSquare,
   ShieldCheck, AlertCircle, ChevronLeft, Loader2, ClipboardList, ArrowRight, ArrowUp, ArrowDown, Save, RotateCcw, Home,
-  Mail, Key
+  Mail, Key, MessageSquare
 } from 'lucide-react';
 import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
@@ -6169,6 +6169,119 @@ const PromotionsManagement = () => {
   );
 };
 
+// --- Messages View Component ---
+const MessagesView = () => {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { showNotification } = useAppContext();
+
+  useEffect(() => {
+    fetchMessages();
+  }, []);
+
+  const fetchMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contact_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setMessages(data || []);
+    } catch (err: any) {
+      console.error('Error fetching messages:', err);
+      showNotification('Failed to load messages', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (id: string, currentStatus: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentStatus === 'read') return;
+
+    try {
+      const { error } = await supabase
+        .from('contact_messages')
+        .update({ status: 'read' })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setMessages(messages.map(m => m.id === id ? { ...m, status: 'read' } : m));
+    } catch (err: any) {
+      console.error('Error marking message as read:', err);
+      showNotification('Failed to update message status', 'error');
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center text-slate-500">Loading messages...</div>;
+
+  return (
+    <div className="space-y-6 flex-1 min-h-[500px]">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Contact Messages</h2>
+          <p className="text-slate-500 text-sm mt-1">Inquiries and messages submitted via the public contact form.</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        {messages.length === 0 ? (
+          <div className="p-12 text-center flex flex-col items-center">
+            <MessageSquare size={48} className="text-slate-200 mb-4" />
+            <p className="text-slate-500 mb-2">No messages received yet.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {messages.map((msg) => (
+              <div 
+                key={msg.id} 
+                className={`p-6 hover:bg-slate-50 transition-colors cursor-pointer ${msg.status === 'unread' ? 'bg-emerald-50/30' : ''}`}
+                onClick={() => setExpandedId(expandedId === msg.id ? null : msg.id)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4">
+                    <div className={`mt-1 h-3 w-3 rounded-full flex-shrink-0 ${msg.status === 'unread' ? 'bg-emerald-500 shadow-sm shadow-emerald-200' : 'bg-slate-200'}`} />
+                    <div>
+                      <div className="flex items-center space-x-3 mb-1">
+                        <span className="font-bold text-slate-900">{msg.first_name} {msg.last_name}</span>
+                        <span className="text-sm text-slate-500">&lt;{msg.email}&gt;</span>
+                      </div>
+                      <div className="flex items-center space-x-3 text-xs mb-2">
+                        <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-bold uppercase tracking-wider">{msg.inquiry_type}</span>
+                        <span className="text-slate-400">{new Date(msg.created_at).toLocaleString()}</span>
+                      </div>
+                      
+                      {/* Truncated or full message depending on state */}
+                      <p className={`text-slate-600 text-sm ${expandedId === msg.id ? 'whitespace-pre-wrap mt-4' : 'line-clamp-1'}`}>
+                        {msg.message}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col items-end space-y-2 shrink-0 ml-4">
+                    {msg.status === 'unread' && (
+                      <button 
+                        onClick={(e) => markAsRead(msg.id, msg.status, e)}
+                        className="text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors border border-emerald-100"
+                      >
+                        Mark Read
+                      </button>
+                    )}
+                    <ChevronDown size={16} className={`text-slate-400 transition-transform ${expandedId === msg.id ? 'rotate-180' : ''}`} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // --- Main Dashboard Component ---
 
 export default function Dashboard() {
@@ -6221,6 +6334,7 @@ export default function Dashboard() {
     { name: 'Promotions', path: '/dashboard/promotions', icon: <Target size={20} />, roles: ['super-admin', 'admin', 'member'] },
     { name: 'News', path: '/dashboard/news', icon: <Newspaper size={20} />, roles: ['super-admin', 'admin'] },
     { name: 'Users', path: '/dashboard/users', icon: <Users size={20} />, roles: ['super-admin', 'admin'] },
+    { name: 'Messages', path: '/dashboard/messages', icon: <MessageSquare size={20} />, roles: ['super-admin', 'admin'] },
     {
       name: 'Notifications', path: '/dashboard/notifications',
       icon: <Bell size={20} />,
@@ -6431,6 +6545,7 @@ export default function Dashboard() {
             <Route path="/promotions" element={<PromotionsManagement />} />
             <Route path="/news" element={<NewsManagement />} />
             <Route path="/users" element={<UserManagement />} />
+            <Route path="/messages" element={<MessagesView />} />
             <Route path="/logs" element={<ActivityLogs />} />
             <Route path="/profile" element={<ProfileEdit user={user} />} />
             <Route path="/notifications" element={<NotificationsView user={user} />} />
