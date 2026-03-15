@@ -1678,7 +1678,7 @@ const Applications = () => {
 };
 
 const MembersManagement = () => {
-  const { hotels: rawHotels, refreshData, showNotification, user } = useAppContext();
+  const { hotels: rawHotels, refreshData, showNotification, user, profiles } = useAppContext();
   const navigate = useNavigate();
   const [processing, setProcessing] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -1688,6 +1688,10 @@ const MembersManagement = () => {
     field: 'hotelName',
     direction: 'asc'
   });
+  const [passwordTarget, setPasswordTarget] = useState<any>(null);
+  const [newForcedPassword, setNewForcedPassword] = useState('');
+  const [settingPassword, setSettingPassword] = useState(false);
+
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -1715,13 +1719,76 @@ const MembersManagement = () => {
     });
   };
 
+  const handleAdminResetPassword = async (userEmail: string) => {
+    askConfirm(
+      'Reset Password?',
+      `Are you sure you want to send a secure password reset link to ${userEmail}?`,
+      async () => {
+        try {
+          const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+            redirectTo: `${window.location.origin}/#/login?type=recovery`,
+          });
+          if (error) throw error;
+          showNotification('Password reset link sent to user email.', 'success');
+        } catch (err: any) {
+          showNotification(err.message, 'error');
+        }
+      },
+      'warning'
+    );
+  };
+
+  const handleForcedPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordTarget) return;
+    if (newForcedPassword.length < 6) {
+      showNotification('Password must be at least 6 characters', 'warning');
+      return;
+    }
+
+    setSettingPassword(true);
+    try {
+      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+      if (userError || !currentUser) {
+        showNotification('Your session has expired or is invalid. Please sign out and sign in again.', 'error');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('admin-change-password', {
+        body: { userId: passwordTarget.id, newPassword: newForcedPassword }
+      });
+
+      if (error) {
+        const errorMsg = error.message || 'Unknown error occurred';
+        showNotification(`Error: ${errorMsg}`, 'error');
+        return;
+      }
+
+      showNotification(`Password for ${passwordTarget.name || passwordTarget.email} updated successfully.`, 'success');
+
+      await supabase.from('activities').insert({
+        type: 'user',
+        text: `Forced password reset for ${passwordTarget.name || passwordTarget.email}`
+      });
+
+      setPasswordTarget(null);
+      setNewForcedPassword('');
+      await refreshData();
+    } catch (err: any) {
+      console.error('Error setting forced password:', err);
+      showNotification('Error updating password. (Ensure Edge Function is deployed)', 'error');
+    } finally {
+      setSettingPassword(false);
+    }
+  };
+
   const handleApproveMember = async (id: string, hotelName: string) => {
     // Enforce completeness check
     const hotel = rawHotels.find(h => h.id === id);
     const { complete, missing } = isProfileComplete(hotel);
 
     if (!complete) {
-      showNotification('error', `Cannot approve "${hotelName}": Registration incomplete.`);
+      showNotification(`Cannot approve "${hotelName}": Registration incomplete.`, 'error');
       askConfirm(
         'Incomplete Profile',
         `The profile for "${hotelName}" is incomplete. Missing fields: \n\n• ${missing.join('\n• ')}`,
@@ -1742,10 +1809,10 @@ const MembersManagement = () => {
           .eq('id', id);
 
         if (error) {
-          showNotification('error', `Failed to approve: ${error.message}`);
+          showNotification(`Failed to approve: ${error.message}`, 'error');
         } else {
           await logActivity(`Approved membership for "${hotelName}"`);
-          showNotification('success', `${hotelName} is now an active member.`);
+          showNotification(`${hotelName} is now an active member.`, 'success');
           refreshData();
         }
         setProcessing(false);
@@ -1766,10 +1833,10 @@ const MembersManagement = () => {
           .eq('id', id);
 
         if (error) {
-          showNotification('error', `Failed to decline: ${error.message}`);
+          showNotification(`Failed to decline: ${error.message}`, 'error');
         } else {
           await logActivity(`Declined membership for "${hotelName}"`);
-          showNotification('warning', `${hotelName} membership has been declined.`);
+          showNotification(`${hotelName} membership has been declined.`, 'warning');
           refreshData();
         }
         setProcessing(false);
@@ -1790,10 +1857,10 @@ const MembersManagement = () => {
           .eq('id', id);
 
         if (error) {
-          showNotification('error', `Failed to suspend: ${error.message}`);
+          showNotification(`Failed to suspend: ${error.message}`, 'error');
         } else {
           await logActivity(`Suspended membership for "${hotelName}"`);
-          showNotification('success', `${hotelName} has been suspended.`);
+          showNotification(`${hotelName} has been suspended.`, 'success');
           refreshData();
         }
         setProcessing(false);
@@ -1814,10 +1881,10 @@ const MembersManagement = () => {
           .eq('id', id);
 
         if (error) {
-          showNotification('error', `Failed to delete: ${error.message}`);
+          showNotification(`Failed to delete: ${error.message}`, 'error');
         } else {
           await logActivity(`Deleted member record for "${hotelName}"`);
-          showNotification('success', `${hotelName} has been removed from directory.`);
+          showNotification(`${hotelName} has been removed from directory.`, 'success');
           refreshData();
         }
         setProcessing(false);
@@ -2044,14 +2111,14 @@ const MembersManagement = () => {
                       {
                         label: 'Force Password Change',
                         icon: <Lock size={14} />,
-                        variant: 'info',
+                        variant: 'warning',
                         onClick: () => {
                           // Find corresponding auth profile for the hotel
                           const profile = profiles.find(p => p.id === member.user_id || p.email === member.email);
                           if (profile) {
                             setPasswordTarget(profile);
                           } else {
-                            showNotification('error', 'Could not find a registered user account for this hotel.');
+                            showNotification('Could not find a registered user account for this hotel.', 'error');
                           }
                         }
                       },
@@ -2111,6 +2178,62 @@ const MembersManagement = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Forced Password Modal for Members */}
+      {passwordTarget && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setPasswordTarget(null)}></div>
+          <div className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-8">
+              <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl">
+                <Lock size={24} />
+              </div>
+              <button
+                onClick={() => setPasswordTarget(null)}
+                className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400"
+              >
+                <X />
+              </button>
+            </div>
+
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">Set Forced Password</h3>
+            <p className="text-slate-500 text-sm mb-8 font-medium italic">
+              Updating password for <span className="text-slate-900 font-bold">{passwordTarget.name || passwordTarget.email}</span>. The user will be required to change this upon login.
+            </p>
+
+            <form onSubmit={handleForcedPasswordReset} className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">New Temporary Password</label>
+                <input
+                  required
+                  type="text"
+                  value={newForcedPassword}
+                  onChange={e => setNewForcedPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold"
+                />
+              </div>
+
+              <div className="pt-4 flex flex-col gap-3">
+                <button
+                  disabled={settingPassword}
+                  type="submit"
+                  className="w-full bg-slate-900 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-slate-900/20 hover:bg-emerald-600 transition-all disabled:opacity-50 flex items-center justify-center"
+                >
+                  {settingPassword ? 'Updating System...' : 'Enforce New Password'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPasswordTarget(null)}
+                  className="w-full py-4 text-slate-400 font-black uppercase tracking-widest text-[9px] hover:text-slate-600"
+                >
+                  Cancel Action
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <ConfirmationModal
         isOpen={confirmModal.isOpen}
