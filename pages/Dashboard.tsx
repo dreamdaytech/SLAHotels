@@ -9,7 +9,8 @@ import {
   User as UserIcon, Copy, AlertTriangle, CheckCircle, Newspaper,
   Image as ImageIcon, Globe, Award, ChevronRight, FileCheck, Check, ChevronUp, ChevronDown,
   MoreHorizontal, MoreVertical, History, Filter, Phone, Scale, FileBadge, FileSignature, CheckSquare,
-  ShieldCheck, AlertCircle, ChevronLeft, Loader2, ClipboardList, ArrowRight, ArrowUp, ArrowDown, Save, RotateCcw, Home
+  ShieldCheck, AlertCircle, ChevronLeft, Loader2, ClipboardList, ArrowRight, ArrowUp, ArrowDown, Save, RotateCcw, Home,
+  Mail, Key
 } from 'lucide-react';
 import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
@@ -2035,6 +2036,26 @@ const MembersManagement = () => {
                         onClick: () => navigate(`/members/${createSlug(member.hotelName)}`)
                       },
                       {
+                        label: 'Send Reset Link',
+                        icon: <Mail size={14} />,
+                        variant: 'warning',
+                        onClick: () => handleAdminResetPassword(member.email)
+                      },
+                      {
+                        label: 'Force Password Change',
+                        icon: <Lock size={14} />,
+                        variant: 'info',
+                        onClick: () => {
+                          // Find corresponding auth profile for the hotel
+                          const profile = profiles.find(p => p.id === member.user_id || p.email === member.email);
+                          if (profile) {
+                            setPasswordTarget(profile);
+                          } else {
+                            showNotification('error', 'Could not find a registered user account for this hotel.');
+                          }
+                        }
+                      },
+                      {
                         label: member.status === 'pending' ? 'Approve Membership' : 'Mark as Approved',
                         icon: <CheckCircle2 size={14} />,
                         variant: 'success',
@@ -2441,7 +2462,23 @@ const UserManagement = () => {
                       )}
                     </td>
                     <td className="px-4 md:px-8 py-4 text-right">
-                      <div className="flex justify-end relative" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-end items-center space-x-2 relative" onClick={(e) => e.stopPropagation()}>
+                        <div className="hidden xl:flex items-center bg-slate-100/50 p-1 rounded-xl mr-2">
+                          <button
+                            onClick={() => handleAdminResetPassword(u.email)}
+                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                            title="Send Reset Link"
+                          >
+                            <Mail size={16} />
+                          </button>
+                          <button
+                            onClick={() => setPasswordTarget(u)}
+                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                            title="Force New Password"
+                          >
+                            <Lock size={16} />
+                          </button>
+                        </div>
                         <button
                           onClick={() => setOpenMenuId(openMenuId === u.id ? null : u.id)}
                           className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
