@@ -5137,6 +5137,7 @@ function MemberOverview({ user }: { user: any }) {
 }
 
 function SettingsView({ user }: { user: any }) {
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -5160,31 +5161,48 @@ function SettingsView({ user }: { user: any }) {
     setSuccess('');
 
     try {
+      // 1. Verify identity by attempting to sign in with old password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: oldPassword,
+      });
+
+      if (signInError) {
+        throw new Error('Verification failed: Your current password seems incorrect.');
+      }
+
+      // 2. Update to new password
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
       if (updateError) throw updateError;
 
-      // Update password_changed flag in profiles table
+      // 3. Update password_changed flag in profiles table
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ password_changed: true })
+        .update({
+          password_changed: true,
+          security_verified: true,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', user.id);
 
       if (profileError) {
-        console.error('Error updating password_changed flag:', profileError);
-      } else {
-        showNotification('Password updated successfully', 'success');
-        setSuccess('Password updated successfully');
-
-        // Optimistically update global state
-        setUser({
-          ...user,
-          password_changed: true
-        });
+        console.error('Error updating profile security flags:', profileError);
       }
 
+      showNotification('Success! Your account is now protected with your new password.', 'success');
+      setSuccess('Password updated successfully');
+
+      // Optimistically update global state
+      setUser({
+        ...user,
+        password_changed: true,
+        security_verified: true
+      });
+
+      setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
       await refreshData();
@@ -5237,50 +5255,79 @@ function SettingsView({ user }: { user: any }) {
           <Lock className="mr-3 text-amber-500" /> Security & Privacy
         </h3>
 
+        <div className="mb-6 p-6 bg-slate-50 border border-slate-100 rounded-2xl flex items-start gap-4">
+          <div className="p-3 bg-white rounded-xl shadow-sm">
+            <ShieldCheck size={20} className="text-emerald-500" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Enhanced Privacy</p>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">
+              Updating your password will automatically certify your account as <span className="text-slate-900 font-bold">Secure</span>. Choose a strong, unique password to prevent unauthorized access.
+            </p>
+          </div>
+        </div>
+
         {error && (
-          <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center text-rose-600 text-xs font-bold uppercase tracking-widest">
-            <AlertTriangle size={16} className="mr-3" /> {error}
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center text-rose-600 text-[10px] font-black uppercase tracking-widest">
+            <AlertCircle size={14} className="mr-3" /> {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center text-emerald-700 text-xs font-bold uppercase tracking-widest">
-            <CheckCircle size={16} className="mr-3" /> {success}
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center text-emerald-700 text-[10px] font-black uppercase tracking-widest">
+            <CheckCircle2 size={14} className="mr-3" /> {success}
           </div>
         )}
 
-        <form onSubmit={handleUpdatePassword} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleUpdatePassword} className="space-y-8">
+          <div className="space-y-6">
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">New Password</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Current Password</label>
               <input
                 required
                 type="password"
-                placeholder="••••••••"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Required for identity verification"
+                value={oldPassword}
+                onChange={e => setOldPassword(e.target.value)}
+                className="w-full px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold transition-all"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Confirm New Password</label>
-              <input
-                required
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">New Password</label>
+                <input
+                  required
+                  type="password"
+                  placeholder="At least 6 characters"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className="w-full px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Confirm New Password</label>
+                <input
+                  required
+                  type="password"
+                  placeholder="Repeat new password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  className="w-full px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold transition-all"
+                />
+              </div>
             </div>
           </div>
-          <button
-            disabled={updating}
-            type="submit"
-            className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-md disabled:opacity-50"
-          >
-            {updating ? 'Updating...' : 'Update Password'}
-          </button>
+
+          <div className="pt-4">
+            <button
+              disabled={updating}
+              type="submit"
+              className="w-full md:w-auto bg-slate-900 text-white px-12 py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-slate-900/20 hover:bg-emerald-600 transition-all disabled:opacity-50 flex items-center justify-center"
+            >
+              {updating ? 'System Processing...' : 'Secure & Update Password'}
+            </button>
+          </div>
         </form>
       </div>
     </div>
