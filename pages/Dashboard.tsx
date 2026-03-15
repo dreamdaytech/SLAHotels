@@ -6172,7 +6172,7 @@ const PromotionsManagement = () => {
 // --- Main Dashboard Component ---
 
 export default function Dashboard() {
-  const { user, refreshData, newApplicationCount, clearNewApplicationCount } = useAppContext();
+  const { user, setUser, refreshData, newApplicationCount, clearNewApplicationCount } = useAppContext();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showNotificationPanel, setShowNotificationPanel] = useState(false);
@@ -6196,9 +6196,10 @@ export default function Dashboard() {
   }, [user, navigate]);
 
   const handleLogout = async () => {
+    setUser(null);
     localStorage.removeItem('slah_auth');
     await supabase.auth.signOut();
-    window.location.href = '/';
+    navigate('/', { replace: true });
   };
 
   if (!user) return null;

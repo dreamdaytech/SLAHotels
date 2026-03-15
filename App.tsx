@@ -35,7 +35,7 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMediaOpen, setMobileMediaOpen] = useState(false);
-  const { user } = useAppContext();
+  const { user, setUser } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -49,8 +49,10 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = async () => {
+    setUser(null);
+    localStorage.removeItem('slah_auth');
     await supabase.auth.signOut();
-    window.location.href = '/';
+    navigate('/');
   };
 
   const navLinks = [
