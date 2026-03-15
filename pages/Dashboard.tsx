@@ -9,7 +9,7 @@ import {
   User as UserIcon, Copy, AlertTriangle, CheckCircle, Newspaper,
   Image as ImageIcon, Globe, Award, ChevronRight, FileCheck, Check, ChevronUp, ChevronDown,
   MoreHorizontal, MoreVertical, History, Filter, Phone, Scale, FileBadge, FileSignature, CheckSquare,
-  ShieldCheck, AlertCircle, ChevronLeft, Loader2, ClipboardList, ArrowRight, ArrowUp, ArrowDown, Save, RotateCcw
+  ShieldCheck, AlertCircle, ChevronLeft, Loader2, ClipboardList, ArrowRight, ArrowUp, ArrowDown, Save, RotateCcw, Home
 } from 'lucide-react';
 import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
@@ -5975,6 +5975,7 @@ export default function Dashboard() {
   const isAdmin = user.role === 'admin' || user.role === 'super-admin';
 
   const menuItems = [
+    { name: 'Home', path: '/', icon: <Home size={20} />, roles: ['super-admin', 'admin', 'member'] },
     { name: 'Overview', path: '/dashboard', icon: <LayoutDashboard size={20} />, roles: ['super-admin', 'admin', 'member'] },
     { name: 'My Profile', path: '/dashboard/profile', icon: <Building2 size={20} />, roles: ['member'] },
     {
