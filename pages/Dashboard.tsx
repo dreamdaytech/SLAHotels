@@ -1691,6 +1691,7 @@ const MembersManagement = () => {
   const [passwordTarget, setPasswordTarget] = useState<any>(null);
   const [newForcedPassword, setNewForcedPassword] = useState('');
   const [settingPassword, setSettingPassword] = useState(false);
+  const [shouldForceChange, setShouldForceChange] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -1755,7 +1756,7 @@ const MembersManagement = () => {
       }
 
       const { data, error } = await supabase.functions.invoke('admin-change-password', {
-        body: { userId: passwordTarget.id, newPassword: newForcedPassword }
+        body: { userId: passwordTarget.id, newPassword: newForcedPassword, shouldForceChange }
       });
 
       if (error) {
@@ -2196,14 +2197,14 @@ const MembersManagement = () => {
               </button>
             </div>
 
-            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">Set Forced Password</h3>
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">Update Password</h3>
             <p className="text-slate-500 text-sm mb-8 font-medium italic">
-              Updating password for <span className="text-slate-900 font-bold">{passwordTarget.name || passwordTarget.email}</span>. The user will be required to change this upon login.
+              Updating password for <span className="text-slate-900 font-bold">{passwordTarget.name || passwordTarget.email}</span>.
             </p>
 
             <form onSubmit={handleForcedPasswordReset} className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">New Temporary Password</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">New Password</label>
                 <input
                   required
                   type="text"
@@ -2214,13 +2215,27 @@ const MembersManagement = () => {
                 />
               </div>
 
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <div>
+                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Enforce change</p>
+                  <p className="text-[9px] text-slate-400 font-medium">Require user to change password on login</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShouldForceChange(!shouldForceChange)}
+                  className={`w-12 h-6 rounded-full transition-all relative ${shouldForceChange ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${shouldForceChange ? 'right-1' : 'left-1'}`}></div>
+                </button>
+              </div>
+
               <div className="pt-4 flex flex-col gap-3">
                 <button
                   disabled={settingPassword}
                   type="submit"
                   className="w-full bg-slate-900 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-slate-900/20 hover:bg-emerald-600 transition-all disabled:opacity-50 flex items-center justify-center"
                 >
-                  {settingPassword ? 'Updating System...' : 'Enforce New Password'}
+                  {settingPassword ? 'Updating System...' : 'Update Password'}
                 </button>
                 <button
                   type="button"
@@ -2257,6 +2272,7 @@ const UserManagement = () => {
   const [passwordTarget, setPasswordTarget] = useState<any>(null);
   const [newForcedPassword, setNewForcedPassword] = useState('');
   const [settingPassword, setSettingPassword] = useState(false);
+  const [shouldForceChange, setShouldForceChange] = useState(false);
   const [roleTarget, setRoleTarget] = useState<any>(null);
   const [updatingRole, setUpdatingRole] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -2397,7 +2413,7 @@ const UserManagement = () => {
       }
 
       const { data, error } = await supabase.functions.invoke('admin-change-password', {
-        body: { userId: passwordTarget.id, newPassword: newForcedPassword }
+        body: { userId: passwordTarget.id, newPassword: newForcedPassword, shouldForceChange }
       });
 
       if (error) {
@@ -2706,14 +2722,14 @@ const UserManagement = () => {
               </button>
             </div>
 
-            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">Set Forced Password</h3>
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-2">Update Password</h3>
             <p className="text-slate-500 text-sm mb-8 font-medium italic">
-              Updating password for <span className="text-slate-900 font-bold">{passwordTarget.name || passwordTarget.email}</span>. The user will be required to change this upon login.
+              Updating password for <span className="text-slate-900 font-bold">{passwordTarget.name || passwordTarget.email}</span>.
             </p>
 
             <form onSubmit={handleForcedPasswordReset} className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">New Temporary Password</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">New Password</label>
                 <input
                   required
                   type="text"
@@ -2724,13 +2740,27 @@ const UserManagement = () => {
                 />
               </div>
 
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <div>
+                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Enforce change</p>
+                  <p className="text-[9px] text-slate-400 font-medium">Require user to change password on login</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShouldForceChange(!shouldForceChange)}
+                  className={`w-12 h-6 rounded-full transition-all relative ${shouldForceChange ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${shouldForceChange ? 'right-1' : 'left-1'}`}></div>
+                </button>
+              </div>
+
               <div className="pt-4 flex flex-col gap-3">
                 <button
                   disabled={settingPassword}
                   type="submit"
                   className="w-full bg-slate-900 text-white py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-slate-900/20 hover:bg-emerald-600 transition-all disabled:opacity-50 flex items-center justify-center"
                 >
-                  {settingPassword ? 'Updating System...' : 'Enforce New Password'}
+                  {settingPassword ? 'Updating System...' : 'Update Password'}
                 </button>
                 <button
                   type="button"
