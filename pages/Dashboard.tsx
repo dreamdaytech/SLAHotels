@@ -5192,20 +5192,14 @@ function SettingsView({ user }: { user: any }) {
         console.error('Error updating profile security flags:', profileError);
       }
 
-      showNotification('Success! Your account is now protected with your new password.', 'success');
-      setSuccess('Password updated successfully');
-
-      // Optimistically update global state
-      setUser({
-        ...user,
-        password_changed: true,
-        security_verified: true
-      });
-
-      setOldPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      await refreshData();
+      showNotification('Success! Your account is now protected with your new password. Please sign in again.', 'success');
+      
+      // Logout and redirect
+      setTimeout(async () => {
+        localStorage.removeItem('slah_auth');
+        await supabase.auth.signOut();
+        window.location.href = '/#/login';
+      }, 2000);
     } catch (err: any) {
       console.error('Settings password update error:', err);
       setError(err.message || 'Failed to update password');
