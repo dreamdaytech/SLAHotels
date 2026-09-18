@@ -5156,7 +5156,6 @@ function MemberOverview({ user }: { user: any }) {
 }
 
 function SettingsView({ user }: { user: any }) {
-  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -5167,8 +5166,8 @@ function SettingsView({ user }: { user: any }) {
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (newPassword.length < 8 || !/\d/.test(newPassword)) {
+      setError('Password must be at least 8 characters and include at least one number.');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -5181,24 +5180,14 @@ function SettingsView({ user }: { user: any }) {
     setSuccess('');
 
     try {
-      // 1. Verify identity by attempting to sign in with old password
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: oldPassword,
-      });
-
-      if (signInError) {
-        throw new Error('Verification failed: Your current password seems incorrect.');
-      }
-
-      // 2. Update to new password
+      // Update the password using the active authenticated Supabase session.
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
       if (updateError) throw updateError;
 
-      // 3. Update password_changed flag in profiles table
+      // Update password_changed flag in profiles table
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -5294,18 +5283,6 @@ function SettingsView({ user }: { user: any }) {
 
         <form onSubmit={handleUpdatePassword} className="space-y-8">
           <div className="space-y-6">
-            <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Current Password</label>
-              <input
-                required
-                type="password"
-                placeholder="Required for identity verification"
-                value={oldPassword}
-                onChange={e => setOldPassword(e.target.value)}
-                className="w-full px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold transition-all"
-              />
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">New Password</label>
