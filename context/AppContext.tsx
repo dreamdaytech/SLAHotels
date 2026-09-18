@@ -62,13 +62,49 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const fetchAppData = async () => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const isAuthenticated = !!session?.user;
+
+      // Resolve the current user's database role only when signed in.
+      // This is used to avoid requesting admin-only datasets from public/member sessions.
+      let isAdmin = false;
+      if (session?.user) {
+        const { data: roleProfile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        isAdmin = roleProfile?.role === 'admin' || roleProfile?.role === 'super-admin';
+      }
+
+      // Public visitors only request public-facing rows. Authenticated sessions continue
+      // to rely on RLS for their role-specific visibility.
+      let newsQuery = supabase.from('news').select('*').order('date', { ascending: false });
+      let eventsQuery = supabase.from('events').select('*').order('date', { ascending: true });
+      let hotelsQuery = supabase.from('hotels').select('*').order('hotel_name', { ascending: true });
+      let promotionsQuery = supabase.from('promotions').select('*').order('created_at', { ascending: false });
+
+      if (!isAuthenticated) {
+        newsQuery = newsQuery.eq('status', 'Published');
+        eventsQuery = eventsQuery.eq('status', 'Published');
+        hotelsQuery = hotelsQuery.eq('status', 'approved');
+        promotionsQuery = promotionsQuery.eq('status', 'Active');
+      }
+
       // Fetching sequentially to prevent Supabase lock contention (AbortError)
-      const newsRes = await supabase.from('news').select('*').order('date', { ascending: false });
-      const eventsRes = await supabase.from('events').select('*').order('date', { ascending: true });
-      const hotelsRes = await supabase.from('hotels').select('*').order('hotel_name', { ascending: true });
-      const profilesRes = await supabase.from('profiles').select('*');
-      const activitiesRes = await supabase.from('activities').select('*').order('created_at', { ascending: false });
-      const promotionsRes = await supabase.from('promotions').select('*').order('created_at', { ascending: false });
+      const newsRes = await newsQuery;
+      const eventsRes = await eventsQuery;
+      const hotelsRes = await hotelsQuery;
+      const promotionsRes = await promotionsQuery;
+
+      // Profiles and activity logs are administrative datasets and should not even be
+      // requested by anonymous visitors or ordinary members.
+      const profilesRes = isAdmin
+        ? await supabase.from('profiles').select('*')
+        : { data: [] as any[], error: null };
+      const activitiesRes = isAdmin
+        ? await supabase.from('activities').select('*').order('created_at', { ascending: false })
+        : { data: [] as any[], error: null };
 
       if (newsRes.data) setNews(newsRes.data);
       if (eventsRes.data) setEvents(eventsRes.data);
@@ -82,19 +118,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         console.warn('Warning fetching hotels:', hotelsRes.error);
       }
 
-      if (profilesRes.data) setProfiles(profilesRes.data);
-      if (activitiesRes.data) setActivities(activitiesRes.data);
+      setProfiles(profilesRes.data || []);
+      setActivities(activitiesRes.data || []);
       if (promotionsRes.data) setPromotions(promotionsRes.data);
 
       // Update userHotel if user is logged in
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user && hotelsRes.data) {
-          const myHotel = hotelsRes.data.find((h: any) => h.user_id === session.user.id || h.email === session.user.email);
-          setUserHotel(myHotel || null);
-        }
-      } catch (sessionErr: any) {
-        console.warn('Session check aborted during app data fetch:', sessionErr);
+      if (session?.user && hotelsRes.data) {
+        const myHotel = hotelsRes.data.find((h: any) => h.user_id === session.user.id || h.email === session.user.email);
+        setUserHotel(myHotel || null);
       }
     } catch (err: any) {
       if (err?.name === 'AbortError' || err?.message?.includes('aborted')) {
