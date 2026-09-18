@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { isProfileComplete } from '../lib/utils';
+import { openHotelDocument } from '../lib/privateStorage';
 
 // All 16 districts of Sierra Leone
 const SIERRA_LEONE_DISTRICTS = [
@@ -313,8 +314,7 @@ const Register: React.FC = () => {
             .upload(filePath, file as File);
 
           if (docError) throw docError;
-          const { data: { publicUrl } } = supabase.storage.from('hotel-documents').getPublicUrl(filePath);
-          documentUrls[key] = publicUrl;
+          documentUrls[key] = filePath;
         }
       } catch (docErr: any) {
         throw new Error('Failed to upload compliance documents: ' + (docErr.message || 'Unknown error'));
@@ -899,9 +899,20 @@ const Register: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-2 shrink-0 ml-2">
                         {(userHotel?.documents as any)?.[key] && !removedDocKeys.has(key) && !(documentStatus as any)[key] && (
-                          <a href={(userHotel?.documents as any)[key]} target="_blank" rel="noopener noreferrer" className="p-2 bg-white border border-slate-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all" title="View document">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await openHotelDocument((userHotel?.documents as any)[key]);
+                              } catch (err: any) {
+                                showNotification(err.message || 'Unable to open document.', 'error');
+                              }
+                            }}
+                            className="p-2 bg-white border border-slate-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all"
+                            title="View document"
+                          >
                             <Eye size={14} />
-                          </a>
+                          </button>
                         )}
                         {((documentStatus as any)[key] || ((userHotel?.documents as any)?.[key] && !removedDocKeys.has(key))) && (
                           <button type="button" onClick={() => removeDocument(key)} className="p-2 bg-white border border-rose-200 text-rose-500 rounded-lg hover:bg-rose-50 transition-all" title="Remove document">
