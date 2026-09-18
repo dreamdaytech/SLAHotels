@@ -169,8 +169,8 @@ export default function Login() {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long.');
+    if (newPassword.length < 8 || !/\d/.test(newPassword)) {
+      setError('Password must be at least 8 characters long and include at least one number.');
       return;
     }
     if (newPassword !== confirmPassword) {
