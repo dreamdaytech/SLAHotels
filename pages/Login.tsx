@@ -242,7 +242,7 @@ export default function Login() {
             email: user.email,
             password_changed: true,
             name: user.user_metadata?.name || 'User',
-            role: user.user_metadata?.role || 'member'
+            role: 'member'
           });
 
         if (!insertError) persistenceSuccess = true;
@@ -302,17 +302,8 @@ export default function Login() {
     setResetSuccess(false);
 
     try {
-      // 1. Verify if email exists in the system via safe RPC
-      const { data: exists, error: rpcError } = await supabase
-        .rpc('verify_email_exists', { email_to_check: resetEmail });
-
-      if (rpcError) throw rpcError;
-
-      if (!exists) {
-        throw new Error('This email address is not registered with SLAH. Please check for typos or contact the Secretariat.');
-      }
-
-      // 2. Proceed with reset if profile exists
+      // Do not reveal whether an email exists in the system.
+      // Supabase safely handles unknown addresses without exposing account membership.
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/login`,
       });
@@ -321,7 +312,7 @@ export default function Login() {
 
       setResetSuccess(true);
       setResetEmail('');
-      showNotification('Recovery email sent successfully.', 'success');
+      showNotification('If an account exists for that email, a recovery link has been sent.', 'success');
     } catch (err: any) {
       console.error('Reset error:', err.message);
 
