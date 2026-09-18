@@ -375,12 +375,17 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
                     };
                     const label = docLabels[key] || key.replace(/([A-Z])/g, ' $1').trim();
                     return (
-                      <a
+                      <button
                         key={key}
-                        href={url as string}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between p-5 bg-slate-50 hover:bg-emerald-50 rounded-2xl group transition-all border border-slate-100 hover:border-emerald-200"
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await openHotelDocument(url as string);
+                          } catch (err: any) {
+                            showNotification(err.message || 'Unable to open document.', 'error');
+                          }
+                        }}
+                        className="flex items-center justify-between p-5 bg-slate-50 hover:bg-emerald-50 rounded-2xl group transition-all border border-slate-100 hover:border-emerald-200 w-full text-left"
                       >
                         <div className="flex items-center space-x-4 min-w-0">
                           <div className="p-3 bg-rose-50 group-hover:bg-emerald-100 rounded-xl shrink-0 transition-colors">
@@ -460,7 +465,7 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Eye size={24} className="text-white transform scale-50 group-hover:scale-100 transition-transform" />
                   </div>
-                </button>
+                </a>
               ))}
               {(!app.gallery || app.gallery.length === 0) && (
                 <div className="col-span-full py-16 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center">
@@ -790,7 +795,7 @@ const ApplicationDetail = () => {
               {app.website && (
                 <div className="sm:col-span-2 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
                   <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-1">Website</p>
-                  <a href={app.website} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-emerald-700 hover:underline break-all">{app.website}</button>
+                  <a href={app.website} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-emerald-700 hover:underline break-all">{app.website}</a>
                 </div>
               )}
             </div>
@@ -904,7 +909,7 @@ const ApplicationDetail = () => {
                           showNotification(err.message || 'Unable to open document.', 'error');
                         }
                       }}
-                        className="flex items-center justify-between p-4 bg-white hover:bg-violet-50 border border-slate-100 hover:border-violet-200 rounded-2xl group transition-all">
+                        className="flex items-center justify-between p-4 bg-white hover:bg-violet-50 border border-slate-100 hover:border-violet-200 rounded-2xl group transition-all w-full text-left">
                         <div className="flex items-center gap-4">
                           <div className="p-3 bg-violet-50 group-hover:bg-violet-100 rounded-xl transition-colors">
                             <FileText size={16} className="text-violet-500" />
@@ -968,7 +973,7 @@ const ApplicationDetail = () => {
                       <div className="absolute inset-0 bg-gradient-to-t from-rose-900/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-start p-3">
                         <span className="text-white text-[10px] font-black uppercase tracking-widest">View</span>
                       </div>
-                    </button>
+                    </a>
                   ))}
                 </div>
               ) : (
@@ -4785,7 +4790,18 @@ const ProfileEdit = ({ user }: { user: any }) => {
                   </div>
                   <div className="flex items-center space-x-2 shrink-0 ml-2">
                     {(existingDocuments as any)[key] && !(newDocuments as any)[key] && (
-                      <a href={(existingDocuments as any)[key]} target="_blank" rel="noopener noreferrer" className="p-2 bg-white border border-slate-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all" title="View document">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await openHotelDocument((existingDocuments as any)[key]);
+                          } catch (err: any) {
+                            showNotification(err.message || 'Unable to open document.', 'error');
+                          }
+                        }}
+                        className="p-2 bg-white border border-slate-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all"
+                        title="View document"
+                      >
                         <Eye size={14} />
                       </button>
                     )}
