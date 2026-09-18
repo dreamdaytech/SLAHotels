@@ -81,7 +81,7 @@ const Navbar = () => {
   if (isDashboard) return null;
 
   return (
-    <nav className={`fixed w-full z-50 transition-all duration-300 bg-white shadow-md py-1 border-b border-slate-100`}>
+    <nav className={`fixed inset-x-0 top-0 w-full z-50 transition-all duration-300 bg-white shadow-md py-1 border-b border-slate-100`}>
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex justify-between items-center">
           <Link to="/" className="flex items-center">
@@ -138,25 +138,25 @@ const Navbar = () => {
             </Link>
           </div>
 
-          <button className="lg:hidden p-2 rounded-md text-slate-800" onClick={() => setIsOpen(!isOpen)}>
+          <button className="lg:hidden p-3 -mr-1 rounded-xl text-slate-800 min-h-11 min-w-11 flex items-center justify-center" onClick={() => setIsOpen(!isOpen)} aria-label="Open navigation menu">
             {isOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
       </div>
 
       {/* Mobile Nav */}
-      <div className={`lg:hidden fixed inset-0 bg-white z-[60] transition-transform duration-500 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`lg:hidden fixed inset-0 bg-white z-[60] transition-transform duration-500 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`} aria-hidden={!isOpen}>
         {/* Close Button Inside Mobile Menu */}
         <button
           onClick={() => setIsOpen(false)}
-          className="absolute top-8 right-8 p-3 bg-slate-50 text-slate-900 rounded-2xl hover:bg-slate-100 border border-slate-100 transition-all shadow-sm active:scale-95 z-[70]"
+          className="absolute top-4 right-4 sm:top-8 sm:right-8 p-3 bg-slate-50 text-slate-900 rounded-2xl hover:bg-slate-100 border border-slate-100 transition-all shadow-sm active:scale-95 z-[70]"
           aria-label="Close menu"
         >
           <X size={28} />
         </button>
 
-        <div className="flex flex-col h-full p-8 pt-24 space-y-4 overflow-y-auto African-accents">
-          <div className="mb-12 flex justify-center"><SLAHLogo variant="dark" className="h-24" /></div>
+        <div className="flex flex-col h-full px-5 sm:px-8 pt-20 sm:pt-24 pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-3 sm:space-y-4 overflow-y-auto African-accents">
+          <div className="mb-6 sm:mb-10 flex justify-center"><SLAHLogo variant="dark" className="h-16 sm:h-20" /></div>
           {navLinks.map((link) => (
             link.submenu ? (
               <div key={link.name} className="flex flex-col">
@@ -186,7 +186,7 @@ const Navbar = () => {
               <Link
                 key={link.name}
                 to={link.path}
-                className="text-xl font-bold text-slate-800 hover:text-emerald-600 border-b border-slate-100 pb-2"
+                className="text-lg sm:text-xl font-bold text-slate-800 hover:text-emerald-600 border-b border-slate-100 pb-2"
                 onClick={() => setIsOpen(false)}
               >
                 {link.name}
@@ -272,8 +272,8 @@ const NotificationToast = () => {
   };
 
   return (
-    <div className="fixed bottom-8 right-8 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
-      <div className={`flex items-center space-x-4 p-4 pr-6 rounded-2xl border shadow-2xl ${styles[notification.type]} min-w-[320px] max-w-md`}>
+    <div className="fixed left-3 right-3 bottom-3 sm:left-auto sm:right-8 sm:bottom-8 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
+      <div className={`flex items-center space-x-4 p-4 pr-6 rounded-2xl border shadow-2xl ${styles[notification.type]} w-full sm:min-w-[320px] sm:w-auto max-w-md`}>
         <div className="flex-shrink-0">
           {icons[notification.type]}
         </div>
