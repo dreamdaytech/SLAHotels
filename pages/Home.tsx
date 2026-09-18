@@ -43,7 +43,7 @@ const Home: React.FC = () => {
   return (
     <div className="overflow-hidden">
       {/* Hero Section */}
-      <section className="relative h-screen min-h-[600px] flex items-center">
+      <section className="relative min-h-[680px] sm:min-h-[720px] lg:h-screen lg:min-h-[600px] flex items-center pt-20 sm:pt-24">
         <div className="absolute inset-0 z-0">
           <img
             src="/home-banner.jpg"
@@ -58,12 +58,12 @@ const Home: React.FC = () => {
             <span className="inline-block bg-amber-500 text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
               Official Association
             </span>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight mb-8">
+            <h1 className="text-[2rem] leading-[1.12] sm:text-4xl lg:text-5xl font-bold text-white sm:leading-tight mb-6 sm:mb-8">
               Uniting Hotels.<br />
               Strengthening Hospitality.<br />
               Growing Tourism.
             </h1>
-            <p className="text-lg md:text-xl text-emerald-50 font-light mb-10 max-w-2xl leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-emerald-50 font-light mb-8 sm:mb-10 max-w-2xl leading-relaxed">
               SLAH is the national umbrella body representing the interests of hotels and hospitality stakeholders across the Sierra Leonean landscape.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -127,7 +127,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* About Preview */}
-      <section className="py-24 pt-32 lg:pt-48 bg-white">
+      <section className="py-16 sm:py-20 lg:py-24 pt-32 lg:pt-48 bg-white">
         <div className="container mx-auto px-4 md:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="relative">
@@ -160,7 +160,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Role & Impact */}
-      <section className="py-24 bg-slate-50">
+      <section className="py-16 sm:py-20 lg:py-24 bg-slate-50">
         <div className="container mx-auto px-4 md:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Our Role & Impact</h2>
@@ -183,15 +183,15 @@ const Home: React.FC = () => {
       </section>
 
       {/* Membership CTA */}
-      <section className="py-20 relative overflow-hidden">
+      <section className="py-14 sm:py-20 relative overflow-hidden">
         <div className="absolute inset-0 bg-emerald-900">
           <div className="absolute inset-0 opacity-10 african-accents"></div>
         </div>
         <div className="container mx-auto px-4 md:px-8 relative z-10">
-          <div className="bg-amber-600 rounded-3xl p-8 md:p-16 flex flex-col lg:flex-row items-center justify-between shadow-2xl">
+          <div className="bg-amber-600 rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-16 flex flex-col lg:flex-row items-center justify-between shadow-2xl">
             <div className="lg:max-w-xl text-center lg:text-left mb-10 lg:mb-0">
-              <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Elevate Your Hospitality Business</h2>
-              <p className="text-amber-50 text-xl font-light leading-relaxed">
+              <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-5 sm:mb-6">Elevate Your Hospitality Business</h2>
+              <p className="text-amber-50 text-base sm:text-lg md:text-xl font-light leading-relaxed">
                 Join a network of leading hoteliers, gain access to exclusive policy updates, industry research, and professional training opportunities.
               </p>
               <ul className="mt-8 space-y-3">
@@ -216,7 +216,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* News & Updates */}
-      <section className="py-24 bg-white">
+      <section className="py-16 sm:py-20 lg:py-24 bg-white">
         <div className="container mx-auto px-4 md:px-8">
           <div className="flex flex-col md:flex-row justify-between items-end mb-16">
             <div className="max-w-2xl mb-8 md:mb-0">
