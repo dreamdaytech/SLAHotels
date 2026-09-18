@@ -49,7 +49,19 @@ export default function Login() {
             .single();
 
           if (profile) {
-            // STATE-FIRST: If database confirms password is changed, bypass all reset views
+            // Recovery must take precedence over the normal "already secured" redirect.
+            // Support both legacy hash links and BrowserRouter query-string callbacks.
+            const recoveryType = new URLSearchParams(window.location.search).get('type');
+            const isRecovery =
+              recoveryType === 'recovery' ||
+              window.location.hash.includes('type=recovery');
+
+            if (isRecovery) {
+              setView('recovery');
+              return;
+            }
+
+            // STATE-FIRST: If database confirms password is changed, bypass forced-reset views.
             if (profile.password_changed) {
               console.log('Password verified in database. Transitioning to dashboard.');
               cleanupAuthFragment();
@@ -57,14 +69,7 @@ export default function Login() {
               return;
             }
 
-            // Detect if we came from a recovery link (typically via hash)
-            const isRecovery = window.location.hash.includes('type=recovery');
-
-            if (isRecovery) {
-              setView('recovery');
-            } else if (!profile.password_changed) {
-              setView('update');
-            }
+            setView('update');
           }
         } else {
           // If no user, just clean up if there's an error fragment
@@ -75,6 +80,16 @@ export default function Login() {
       }
     };
     checkUser();
+
+    // Supabase emits PASSWORD_RECOVERY after a valid recovery link is processed.
+    // Listening for it makes the reset UI robust even when callback URL formats change.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setView('recovery');
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleLogin = (e: React.FormEvent) => {
