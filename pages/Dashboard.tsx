@@ -1754,8 +1754,8 @@ const MembersManagement = () => {
   const handleForcedPasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordTarget) return;
-    if (newForcedPassword.length < 6) {
-      showNotification('Password must be at least 6 characters', 'warning');
+    if (newForcedPassword.length < 8 || !/\d/.test(newForcedPassword)) {
+      showNotification('Password must be at least 8 characters and include at least one number.', 'warning');
       return;
     }
 
@@ -2278,7 +2278,6 @@ const UserManagement = () => {
   const { profiles: users, loading, refreshData, showNotification } = useAppContext();
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'admin' });
-  const [autoApprove, setAutoApprove] = useState(false);
   const [creating, setCreating] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [passwordTarget, setPasswordTarget] = useState<any>(null);
@@ -2356,41 +2355,26 @@ const UserManagement = () => {
     setCreating(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: newUser.email,
-        password: newUser.password,
-        options: {
-          data: {
-            name: newUser.name,
-            role: newUser.role
-          }
+      if (newUser.password.length < 8 || !/\d/.test(newUser.password)) {
+        throw new Error('Password must be at least 8 characters and include at least one number.');
+      }
+
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: {
+          name: newUser.name,
+          email: newUser.email,
+          password: newUser.password,
+          role: newUser.role
         }
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      // If Auto-Approve is checked, create an empty approved hotel record
-      if (autoApprove && data.user) {
-        const { error: hotelError } = await supabase
-          .from('hotels')
-          .insert([{
-            user_id: data.user.id,
-            hotel_name: newUser.name + " (Pending Setup)",
-            email: newUser.email,
-            status: 'approved',
-            created_at: new Date().toISOString()
-          }]);
-
-        if (hotelError) {
-          console.error('Error auto-approving hotel:', hotelError);
-          showNotification('User created, but failed to create hotel record.', 'warning');
-        }
-      }
-
-      // Log activity
       await supabase.from('activities').insert({
         type: 'user',
-        text: `Created new user account: ${newUser.name} (${newUser.role})`
+        text: `Created new user account: ${newUser.name} (${newUser.role})`,
+        user_id: currentUser?.id
       });
 
       showNotification('User account created successfully!', 'success');
@@ -2455,6 +2439,10 @@ const UserManagement = () => {
   };
 
   const handleUpdateRole = async (userId: string, newRole: string) => {
+    if (currentUser?.role !== 'super-admin') {
+      showNotification('Only a super administrator can change user roles.', 'error');
+      return;
+    }
     setUpdatingRole(true);
     try {
       const { error } = await supabase
@@ -2782,8 +2770,8 @@ const UserManagement = () => {
         </div>
       )}
 
-      {/* Role Management Modal (New) */}
-      {roleTarget && (
+      {/* Role Management Modal */}
+      {roleTarget && currentUser?.role === 'super-admin' && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setRoleTarget(null)}></div>
           <div className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
