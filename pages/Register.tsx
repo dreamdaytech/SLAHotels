@@ -125,7 +125,7 @@ const Register: React.FC = () => {
     if (!user) {
       if (!fullName.trim()) newErrors.fullName = 'Full name is required.';
       if (!accountEmail.trim()) newErrors.accountEmail = 'Email is required.';
-      if (!accountPassword || accountPassword.length < 8) newErrors.accountPassword = 'Password must be at least 8 characters.';
+      if (!accountPassword || accountPassword.length < 8 || !/\d/.test(accountPassword)) newErrors.accountPassword = 'Password must be at least 8 characters and include at least one number.';
     }
     // Hotel fields — always required (for both new users and logged-in members)
     if (!hotelName.trim()) newErrors.hotelName = 'Hotel name is required.';
