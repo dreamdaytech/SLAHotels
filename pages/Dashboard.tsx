@@ -2338,7 +2338,6 @@ const UserManagement = () => {
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'admin' });
   const [creating, setCreating] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [passwordTarget, setPasswordTarget] = useState<any>(null);
   const [newForcedPassword, setNewForcedPassword] = useState('');
   const [settingPassword, setSettingPassword] = useState(false);
@@ -2672,82 +2671,37 @@ const UserManagement = () => {
                             <Lock size={16} />
                           </button>
                         </div>
-                        <button
-                          onClick={() => setOpenMenuId(openMenuId === u.id ? null : u.id)}
-                          className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
-                        >
-                          <MoreVertical size={20} />
-                        </button>
-
-                        {openMenuId === u.id && (
-                          <>
-                            <div
-                              className="fixed inset-0 z-[60]"
-                              onClick={() => setOpenMenuId(null)}
-                            ></div>
-                            <div className="absolute right-0 top-12 w-56 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 py-4 z-[70] animate-in fade-in zoom-in-95 duration-200 origin-top-right ring-8 ring-white">
-                              <div className="px-6 pb-3 border-b border-slate-50 mb-2">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">User Actions</p>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  handleAdminResetPassword(u.email);
-                                  setOpenMenuId(null);
-                                }}
-                                className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 flex items-center transition-all group"
-                              >
-                                <History size={16} className="mr-3 text-slate-400 group-hover:text-amber-500" /> Reset Password
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setPasswordTarget(u);
-                                  setOpenMenuId(null);
-                                }}
-                                className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 flex items-center transition-all group"
-                              >
-                                <Lock size={16} className="mr-3 text-slate-400 group-hover:text-indigo-500" /> Set Forced Password
-                              </button>
-                              {currentUser?.role === 'super-admin' && (
-                                <button
-                                  onClick={() => {
-                                    setRoleTarget(u);
-                                    setOpenMenuId(null);
-                                  }}
-                                  className="w-full px-6 py-4 text-left text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 flex items-center transition-all group"
-                                >
-                                  <Settings size={16} className="mr-3 text-slate-400 group-hover:text-emerald-500" /> Manage Permissions
-                                </button>
-                              )}
-
-                              <div className="h-px bg-slate-50 my-1"></div>
-
-                              <button
-                                disabled={deleting}
-                                onClick={() => {
-                                  handleDeleteUser(u);
-                                  setOpenMenuId(null);
-                                }}
-                                className="w-full px-6 py-4 text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center transition-all group disabled:opacity-50"
-                              >
-                                {deleting ? (
-                                  <div className="w-4 h-4 border-2 border-rose-600/20 border-t-rose-600 rounded-full animate-spin mr-3"></div>
-                                ) : (
-                                  <Trash2 size={16} className="mr-3 text-rose-400 group-hover:text-rose-600" />
-                                )}
-                                {deleting ? 'Deleting...' : 'Delete Account'}
-                              </button>
-
-                              <div className="mt-2 px-4">
-                                <button
-                                  onClick={() => setOpenMenuId(null)}
-                                  className="w-full py-2 bg-slate-50 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-100 transition-colors"
-                                >
-                                  Close Menu
-                                </button>
-                              </div>
-                            </div>
-                          </>
-                        )}
+                        <ActionDropdown
+                          label="User Actions"
+                          actions={[
+                            {
+                              label: 'Reset Password',
+                              icon: <History size={16} />,
+                              onClick: () => handleAdminResetPassword(u.email),
+                              variant: 'warning'
+                            },
+                            {
+                              label: 'Set Forced Password',
+                              icon: <Lock size={16} />,
+                              onClick: () => setPasswordTarget(u)
+                            },
+                            ...(isSuperAdmin ? [{
+                              label: 'Manage Permissions',
+                              icon: <Settings size={16} />,
+                              onClick: () => setRoleTarget(u),
+                              variant: 'success' as const
+                            }] : []),
+                            {
+                              label: deleting ? 'Deleting...' : 'Delete Account',
+                              icon: deleting
+                                ? <div className="w-4 h-4 border-2 border-rose-600/20 border-t-rose-600 rounded-full animate-spin" />
+                                : <Trash2 size={16} />,
+                              onClick: () => handleDeleteUser(u),
+                              variant: 'danger',
+                              disabled: deleting
+                            }
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>
