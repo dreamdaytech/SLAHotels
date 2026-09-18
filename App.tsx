@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, ChevronRight, Phone, Mail, MapPin, Facebook, Twitter, Linkedin, Globe, ShieldCheck, TrendingUp, Users, Building2, LayoutDashboard, LogIn, LogOut, Calendar, ChevronDown, CheckCircle2, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -291,9 +291,27 @@ const NotificationToast = () => {
   );
 };
 
+const AuthHydrationScreen = () => (
+  <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50 px-4">
+    <div className="flex flex-col items-center text-center">
+      <SLAHLogo variant="dark" className="h-20 sm:h-24 w-auto mb-6" />
+      <div className="w-10 h-10 rounded-full border-4 border-emerald-100 border-t-emerald-600 animate-spin mb-4" />
+      <p className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+        Restoring your secure session
+      </p>
+    </div>
+  </div>
+);
+
 const AppContent = () => {
   const location = useLocation();
-  const { hotels } = useAppContext();
+  const { hotels, user, loading } = useAppContext();
+
+  const isRecoveryRoute =
+    location.pathname === '/login' &&
+    (new URLSearchParams(location.search).get('type') === 'recovery' ||
+      location.hash.includes('type=recovery') ||
+      location.hash.includes('access_token'));
 
   // Routes where navbar/footer should be hidden
   const isDashboard = location.pathname.startsWith('/dashboard');
@@ -329,9 +347,30 @@ const AppContent = () => {
           <Route path="/news" element={<News />} />
           <Route path="/news/:id" element={<NewsDetails />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/dashboard/*" element={<Dashboard />} />
+          <Route
+            path="/register"
+            element={loading ? <AuthHydrationScreen /> : <Register />}
+          />
+          <Route
+            path="/login"
+            element={
+              loading
+                ? <AuthHydrationScreen />
+                : user && !isRecoveryRoute
+                  ? <Navigate to="/dashboard" replace />
+                  : <Login />
+            }
+          />
+          <Route
+            path="/dashboard/*"
+            element={
+              loading
+                ? <AuthHydrationScreen />
+                : user
+                  ? <Dashboard />
+                  : <Navigate to="/login" replace />
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

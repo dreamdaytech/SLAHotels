@@ -6305,15 +6305,6 @@ export default function Dashboard() {
     }
   }, [location.pathname]);
 
-  useEffect(() => {
-    if (!user) {
-      const auth = localStorage.getItem('slah_auth');
-      if (!auth) {
-        navigate('/login');
-      }
-    }
-  }, [user, navigate]);
-
   const handleLogout = async () => {
     setUser(null);
     localStorage.removeItem('slah_auth');
