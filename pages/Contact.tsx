@@ -87,7 +87,7 @@ const Contact: React.FC = () => {
     }
   };
   return (
-    <div className="pt-24 lg:pt-32 pb-24">
+    <div className="pt-20 sm:pt-24 lg:pt-32 pb-16 sm:pb-20 lg:pb-24">
       <div className="container mx-auto px-4 md:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
 
