@@ -1727,7 +1727,7 @@ const MembersManagement = () => {
       async () => {
         try {
           const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-            redirectTo: `${window.location.origin}/#/login?type=recovery`,
+            redirectTo: `${window.location.origin}/login?type=recovery`,
           });
           if (error) throw error;
           showNotification('Password reset link sent to user email.', 'success');
@@ -2327,7 +2327,7 @@ const UserManagement = () => {
       async () => {
         try {
           const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-            redirectTo: `${window.location.origin}/#/login?type=recovery`,
+            redirectTo: `${window.location.origin}/login?type=recovery`,
           });
           if (error) throw error;
           showNotification('Password reset link sent to user email.', 'success');
@@ -2480,17 +2480,12 @@ const UserManagement = () => {
           const { data: { session } } = await supabase.auth.getSession();
           if (!session) throw new Error('Session lost');
 
-          const response = await fetch('https://mvduiyvpjkmigvkelnzv.supabase.co/functions/v1/admin-delete-user', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({ userId: user.id })
+          const { data: result, error: deleteError } = await supabase.functions.invoke('admin-delete-user', {
+            body: { userId: user.id }
           });
 
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.error || 'Failed to delete user');
+          if (deleteError) throw deleteError;
+          if (result?.error) throw new Error(result.error);
 
           await supabase.from('activities').insert({
             type: 'admin_action',
