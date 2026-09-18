@@ -34,7 +34,7 @@ const EventCard: React.FC<{ event: Event }> = ({ event }) => {
     : new Date(event.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-slate-100 group hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
+    <div className="bg-white rounded-2xl sm:rounded-[2.5rem] overflow-hidden shadow-sm border border-slate-100 group hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
       <div className="h-72 relative overflow-hidden">
         <img src={event.image} alt={event.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
         <div className="absolute top-8 left-8">
@@ -126,10 +126,10 @@ const Events: React.FC = () => {
   const categories = ['All', 'Summit', 'Corporate', 'Training', 'Community'];
 
   return (
-    <div className="pt-32 lg:pt-40 pb-32 african-accents">
+    <div className="pt-24 sm:pt-28 lg:pt-40 pb-20 sm:pb-24 lg:pb-32 african-accents">
       <div className="container mx-auto px-4 md:px-8">
-        <div className="max-w-4xl mb-20">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-black text-slate-900 mb-8 tracking-tighter leading-none">
+        <div className="max-w-4xl mb-12 sm:mb-16 lg:mb-20">
+          <h1 className="text-3xl min-[380px]:text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-black text-slate-900 mb-8 tracking-tighter leading-none">
             Events <span className="text-emerald-600">&</span> Summits
           </h1>
           <p className="text-base sm:text-xl md:text-2xl text-slate-500 font-medium leading-relaxed">
@@ -138,7 +138,7 @@ const Events: React.FC = () => {
         </div>
 
         {/* Search, Filter, and Sort Controls Area */}
-        <div className="space-y-8 mb-16">
+        <div className="space-y-5 sm:space-y-8 mb-10 sm:mb-16">
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
             {/* Status Navigation Tabs */}
             <div className="flex p-1.5 bg-slate-100 rounded-[1.75rem] w-full sm:w-fit overflow-x-auto no-scrollbar scroll-smooth pb-1">
@@ -188,7 +188,7 @@ const Events: React.FC = () => {
               <input
                 type="text"
                 placeholder="Search by topic, venue, or category..."
-                className="w-full pl-16 pr-8 py-5 bg-white border border-slate-100 rounded-[2.5rem] outline-none focus:ring-8 focus:ring-emerald-500/5 focus:border-emerald-500 transition-all font-medium text-lg shadow-sm"
+                className="w-full pl-16 pr-8 py-5 bg-white border border-slate-100 rounded-2xl sm:rounded-[2.5rem] outline-none focus:ring-8 focus:ring-emerald-500/5 focus:border-emerald-500 transition-all font-medium text-lg shadow-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
