@@ -217,10 +217,10 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[95vh] flex flex-col">
+      <div className="bg-white w-full max-w-5xl mobile-modal-panel rounded-2xl sm:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[95dvh] flex flex-col">
         {/* Modal Header */}
-        <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center space-x-4">
+        <div className="p-4 sm:p-6 md:p-8 border-b border-slate-50 flex items-start sm:items-center justify-between gap-3 bg-slate-50/50">
+          <div className="flex items-center gap-1.5 sm:gap-3 md:gap-4">
             <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-lg">
               <Hotel size={24} />
             </div>
@@ -235,10 +235,10 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
         </div>
 
         {/* Modal Body */}
-        <div className="flex-grow overflow-y-auto p-10 no-scrollbar space-y-12 bg-slate-50/30">
+        <div className="flex-grow overflow-y-auto p-4 sm:p-6 md:p-10 no-scrollbar space-y-6 sm:space-y-8 md:space-y-12 bg-slate-50/30">
 
           {/* Section A: Hotel Information */}
-          <section className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+          <section className="bg-white rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 md:p-8 border border-slate-100 shadow-sm">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 pb-4 border-b border-slate-50 flex items-center">
               <Info size={14} className="mr-2 text-emerald-500" /> SECTION A: Hotel Information
             </h3>
@@ -271,7 +271,7 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
           </section>
 
           {/* Section B: Ownership & Management */}
-          <section className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+          <section className="bg-white rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 md:p-8 border border-slate-100 shadow-sm">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 pb-4 border-b border-slate-50 flex items-center">
               <Users size={14} className="mr-2 text-emerald-500" /> SECTION B: Ownership & Management
             </h3>
@@ -300,7 +300,7 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
           </section>
 
           {/* Section C: Facilities & Classification */}
-          <section className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+          <section className="bg-white rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 md:p-8 border border-slate-100 shadow-sm">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 pb-4 border-b border-slate-50 flex items-center">
               <Star size={14} className="mr-2 text-emerald-500" /> SECTION C: Facilities & Classification
             </h3>
@@ -347,7 +347,7 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
           </section>
 
           {/* Section D: Legal & Compliance */}
-          <section className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+          <section className="bg-white rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 md:p-8 border border-slate-100 shadow-sm">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 pb-4 border-b border-slate-100 flex items-center">
               <Scale size={14} className="mr-2 text-emerald-500" /> SECTION D: Legal & Compliance
             </h3>
@@ -454,7 +454,7 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
           </section>
 
           {/* Section F: Property Showcase */}
-          <section className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+          <section className="bg-white rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 md:p-8 border border-slate-100 shadow-sm">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 pb-4 border-b border-slate-50 flex items-center">
               <ImageIcon size={14} className="mr-2 text-emerald-500" /> SECTION F: Property Showcase
             </h3>
@@ -1148,8 +1148,8 @@ const ConfirmationModal = ({
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-100">
-        <div className={`p-10 ${theme.bg} border-b ${theme.border} flex flex-col items-center text-center`}>
+      <div className="bg-white w-full max-w-md mobile-modal-panel rounded-2xl sm:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-100">
+        <div className={`p-5 sm:p-8 md:p-10 ${theme.bg} border-b ${theme.border} flex flex-col items-center text-center`}>
           <div className={`p-5 ${theme.iconBg} ${theme.iconText} rounded-3xl mb-6 shadow-sm border ${theme.border}`}>
             {variant === 'danger' ? <Trash2 size={32} /> :
               variant === 'warning' ? <AlertTriangle size={32} /> :
@@ -1159,7 +1159,7 @@ const ConfirmationModal = ({
           <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-3">{title}</h2>
           <p className="text-sm text-slate-500 leading-relaxed font-bold">{message}</p>
         </div>
-        <div className="p-8 bg-white flex flex-col sm:flex-row gap-4">
+        <div className="p-5 sm:p-8 bg-white flex flex-col sm:flex-row gap-3 sm:gap-4">
           <button
             onClick={onClose}
             className="flex-1 px-8 py-4 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100"
@@ -1552,23 +1552,23 @@ const Applications = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="responsive-scroll mobile-edge-scroll md:mx-0 md:px-0">
           <table className="w-full text-left">
             <thead className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
               <tr>
-                <th className="px-10 py-5">Hotel Entity</th>
-                <th className="px-10 py-5">Corporate Head</th>
-                <th className="px-10 py-5">Submission</th>
-                <th className="px-10 py-5">Star Class</th>
-                <th className="px-10 py-5">Completeness</th>
-                <th className="px-10 py-5 text-right">Review Record</th>
+                <th className="px-4 sm:px-6 md:px-10 py-4 md:py-5">Hotel Entity</th>
+                <th className="px-4 sm:px-6 md:px-10 py-4 md:py-5">Corporate Head</th>
+                <th className="px-4 sm:px-6 md:px-10 py-4 md:py-5">Submission</th>
+                <th className="px-4 sm:px-6 md:px-10 py-4 md:py-5">Star Class</th>
+                <th className="px-4 sm:px-6 md:px-10 py-4 md:py-5">Completeness</th>
+                <th className="px-4 sm:px-6 md:px-10 py-4 md:py-5 text-right">Review Record</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredApps.map((app) => (
                 <tr key={app.id} className="hover:bg-slate-50/50 transition-colors text-sm group">
                   <td 
-                    className="px-10 py-6 cursor-pointer" 
+                    className="px-4 sm:px-6 md:px-10 py-4 md:py-6 cursor-pointer" 
                     onClick={() => navigate('/dashboard/applications/' + app.id)}
                   >
                     <div className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors flex items-center gap-2">
@@ -1577,14 +1577,14 @@ const Applications = () => {
                     </div>
                     <div className="text-[9px] text-slate-400 uppercase font-black mt-1">{app.city}</div>
                   </td>
-                  <td className="px-10 py-6 text-slate-500 font-medium">{app.owner}</td>
-                  <td className="px-10 py-6 text-slate-400 font-bold text-xs">{app.date}</td>
-                  <td className="px-10 py-6">
+                  <td className="px-4 sm:px-6 md:px-10 py-4 md:py-6 text-slate-500 font-medium">{app.owner}</td>
+                  <td className="px-4 sm:px-6 md:px-10 py-4 md:py-6 text-slate-400 font-bold text-xs">{app.date}</td>
+                  <td className="px-4 sm:px-6 md:px-10 py-4 md:py-6">
                     <div className="flex text-amber-400">
                       {[...Array(parseInt(app.stars || 4))].map((_, i) => <Star key={i} size={10} fill="currentColor" />)}
                     </div>
                   </td>
-                  <td className="px-10 py-6">
+                  <td className="px-4 sm:px-6 md:px-10 py-4 md:py-6">
                     {(() => {
                       const { complete } = isProfileComplete(app);
                       return (
@@ -1594,7 +1594,7 @@ const Applications = () => {
                       );
                     })()}
                   </td>
-                  <td className="px-10 py-6 text-right">
+                  <td className="px-4 sm:px-6 md:px-10 py-4 md:py-6 text-right">
                     <ActionDropdown
                       label="Application Actions"
                       actions={[
@@ -2010,7 +2010,7 @@ const MembersManagement = () => {
       </div>
 
       <div className="p-4 md:p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex bg-slate-50 p-1 rounded-2xl w-full md:w-auto">
+        <div className="responsive-scroll mobile-edge-scroll md:mx-0 md:px-0 flex bg-slate-50 p-1 rounded-2xl w-full md:w-auto">
           {['all', 'approved', 'pending', 'suspended', 'rejected'].map((status) => (
             <button
               key={status}
@@ -2028,7 +2028,7 @@ const MembersManagement = () => {
           Showing {members.length} {statusFilter === 'all' ? 'total' : statusFilter} records
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="responsive-scroll mobile-edge-scroll md:mx-0 md:px-0">
         <table className="w-full text-left min-w-[600px]">
           <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
             <tr>
@@ -2196,7 +2196,7 @@ const MembersManagement = () => {
       {passwordTarget && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setPasswordTarget(null)}></div>
-          <div className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+          <div className="relative bg-white w-full max-w-md mobile-modal-panel rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-8">
               <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl">
                 <Lock size={24} />
@@ -2222,7 +2222,7 @@ const MembersManagement = () => {
                   type="text"
                   value={newForcedPassword}
                   onChange={e => setNewForcedPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="8+ characters with at least one number"
                   className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold"
                 />
               </div>
@@ -2704,7 +2704,7 @@ const UserManagement = () => {
       {passwordTarget && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setPasswordTarget(null)}></div>
-          <div className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+          <div className="relative bg-white w-full max-w-md mobile-modal-panel rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-8">
               <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl">
                 <Lock size={24} />
@@ -2730,7 +2730,7 @@ const UserManagement = () => {
                   type="text"
                   value={newForcedPassword}
                   onChange={e => setNewForcedPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="8+ characters with at least one number"
                   className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold"
                 />
               </div>
@@ -2774,7 +2774,7 @@ const UserManagement = () => {
       {roleTarget && isSuperAdmin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setRoleTarget(null)}></div>
-          <div className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+          <div className="relative bg-white w-full max-w-md mobile-modal-panel rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-8">
               <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl">
                 <ShieldCheck size={24} />
@@ -3743,7 +3743,7 @@ const EventsManagement = () => {
                 <Plus size={16} className="mr-2" /> Add New Event
               </button>
             </div>
-            <div className="overflow-x-auto">
+            <div className="responsive-scroll mobile-edge-scroll md:mx-0 md:px-0">
               <table className="w-full text-left min-w-[700px]">
                 <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
                   <tr>
@@ -3773,7 +3773,7 @@ const EventsManagement = () => {
                           <div className="font-bold">{event.date}</div>
                           <div className="text-slate-400">{isMultiDay ? `${event.schedule.length} Days` : event.time}</div>
                         </td>
-                        <td className="px-8 py-5">
+                        <td className="px-4 sm:px-6 md:px-8 py-4 md:py-5">
                           <div className="flex flex-col gap-1.5">
                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-center ${event.status === 'Published' ? 'bg-emerald-100 text-emerald-700' :
                               event.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
@@ -3790,7 +3790,7 @@ const EventsManagement = () => {
                             )}
                           </div>
                         </td>
-                        <td className="px-8 py-5 text-right">
+                        <td className="px-4 sm:px-6 md:px-8 py-4 md:py-5 text-right">
                           <div className="flex justify-end relative" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => setOpenMenuId(openMenuId === event.id ? null : event.id)}
@@ -4666,7 +4666,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
       </div>
 
       <div className="space-y-10">
-        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+        <section className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
           <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><Hotel className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION A: Hotel Identity</h3></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Hotel Name *</label><input required type="text" value={hotelName} onChange={(e) => setHotelName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
@@ -4727,7 +4727,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
           </div>
         </section>
 
-        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+        <section className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
           <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><ClipboardList className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION B: Ownership &amp; Management</h3></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="md:col-span-2"><label className="block text-sm font-bold text-slate-600 mb-2">Owner/Proprietor Name *</label><input required type="text" value={owner} onChange={(e) => setOwner(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
@@ -4738,7 +4738,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
           </div>
         </section>
 
-        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+        <section className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
           <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><Star className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION C: Facilities & Classification</h3></div>
           <div className="space-y-8">
             <div><label className="block text-sm font-bold text-slate-600 mb-4">Hotel Classification (★ rating) *</label><div className="flex gap-4">{[1, 2, 3, 4, 5].map(s => (<label key={s} className="flex items-center space-x-2 cursor-pointer"><input type="radio" checked={stars === s} onChange={() => setStars(s)} className="w-5 h-5 accent-amber-500" /><span>{s} ★</span></label>))}</div></div>
@@ -4749,7 +4749,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
           </div>
         </section>
 
-        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+        <section className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
           <div className="flex items-center mb-4 border-b border-slate-100 pb-4"><Scale className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION D: Compliance &amp; Documentation</h3></div>
           <p className="text-slate-400 text-xs mb-8 italic font-medium">Upload official PDF documents for verification. Accepted format: PDF only.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -4812,7 +4812,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
         </section>
 
 
-        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+        <section className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
           <div className="flex items-center mb-8 border-b border-slate-100 pb-4"><FileSignature className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION E: Commitment</h3></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div><label className="block text-sm font-bold text-slate-600 mb-2">Signee Name *</label><input required type="text" value={signeeName} onChange={(e) => setSigneeName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 bg-slate-50" /></div>
@@ -4821,7 +4821,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
           </div>
         </section>
 
-        <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+        <section className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
           <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
             <div className="flex items-center"><ImageIcon className="text-emerald-600 mr-3" size={28} /><h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION F: Media Gallery</h3></div>
             <span className={`text-xs font-black px-3 py-1 rounded-full ${galleryPreviews.length >= 10 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
@@ -5087,7 +5087,7 @@ function MemberOverview({ user }: { user: any }) {
       </div>
 
       {activePromotions.length > 0 && (
-        <div className="bg-emerald-50 rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-emerald-100 mt-8 relative overflow-hidden">
+        <div className="bg-emerald-50 rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 shadow-sm border border-emerald-100 mt-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500 rounded-full -mr-32 -mt-32 opacity-10"></div>
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 border-b border-emerald-100/50 pb-6">
             <div className="flex items-center">
@@ -5299,7 +5299,7 @@ function SettingsView({ user }: { user: any }) {
                 <input
                   required
                   type="password"
-                  placeholder="At least 6 characters"
+                  placeholder="8+ characters with at least one number"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
                   className="w-full px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-bold transition-all"
@@ -6117,21 +6117,21 @@ const PromotionsManagement = () => {
               <tbody className="divide-y divide-slate-50">
                 {myPromotions.map((promo: any) => (
                   <tr key={promo.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-8 py-5">
+                    <td className="px-4 sm:px-6 md:px-8 py-4 md:py-5">
                       <div className="font-bold text-slate-900 text-sm">{promo.title}</div>
                       <div className="text-[10px] text-slate-400 font-bold mt-1">CODE: {promo.discount_code || 'N/A'}</div>
                     </td>
-                    <td className="px-8 py-5 text-sm text-emerald-600 font-black">{promo.discount_value || 'None'}</td>
-                    <td className="px-8 py-5 text-xs text-slate-500">
+                    <td className="px-4 sm:px-6 md:px-8 py-4 md:py-5 text-sm text-emerald-600 font-black">{promo.discount_value || 'None'}</td>
+                    <td className="px-4 sm:px-6 md:px-8 py-4 md:py-5 text-xs text-slate-500">
                       <div>{promo.valid_from ? new Date(promo.valid_from).toLocaleDateString() : 'Always'} - </div>
                       <div>{promo.valid_until ? new Date(promo.valid_until).toLocaleDateString() : 'No Expiry'}</div>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-4 sm:px-6 md:px-8 py-4 md:py-5">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${promo.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : promo.status === 'Draft' ? 'bg-slate-100 text-slate-500' : 'bg-rose-100 text-rose-700'}`}>
                         {promo.status}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-right relative">
+                    <td className="px-4 sm:px-6 md:px-8 py-4 md:py-5 text-right relative">
                       <button onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === promo.id ? null : promo.id); }} className="p-2 text-slate-400 hover:text-emerald-600 rounded-lg">
                         <MoreVertical size={18} />
                       </button>
@@ -6408,12 +6408,12 @@ export default function Dashboard() {
       </aside>
 
       <div className={`flex-grow ${isCollapsed ? 'lg:ml-24' : 'lg:ml-72'} flex flex-col min-w-0 min-h-screen transition-all duration-500 ease-in-out`}>
-        <header className="bg-white border-b border-slate-100 sticky top-0 z-40 p-4 md:p-6 flex items-center justify-between shadow-sm African-accents">
+        <header className="bg-white border-b border-slate-100 sticky top-0 z-40 px-3 py-3 sm:p-4 md:p-6 flex items-center justify-between gap-2 shadow-sm African-accents">
           <div className="flex items-center">
-            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 mr-3 md:mr-4 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
+            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2.5 mr-1 sm:mr-3 md:mr-4 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
               <Menu size={22} />
             </button>
-            <h1 className="text-lg md:text-xl font-bold text-slate-900 capitalize truncate max-w-[150px] md:max-w-none">
+            <h1 className="text-base sm:text-lg md:text-xl font-bold text-slate-900 capitalize truncate max-w-[120px] min-[380px]:max-w-[170px] sm:max-w-[240px] md:max-w-none">
               {location.pathname === '/dashboard'
                 ? 'Overview'
                 : location.pathname.includes('/applications/')
@@ -6452,7 +6452,7 @@ export default function Dashboard() {
                 />
               )}
             </div>
-            <div className="h-8 w-px bg-slate-100 mx-2"></div>
+            <div className="hidden sm:block h-8 w-px bg-slate-100 mx-1 md:mx-2"></div>
             <div className="flex items-center space-x-3">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-bold text-slate-900">{user?.name || user?.email}</p>
@@ -6465,7 +6465,7 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <main className="p-4 lg:p-10 flex-grow min-w-0">
+        <main className="p-3 sm:p-4 md:p-6 lg:p-10 flex-grow min-w-0 overflow-x-hidden">
           <Routes>
             <Route path="/" element={
               isAdmin ? (
@@ -6477,7 +6477,7 @@ export default function Dashboard() {
                       <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-indigo-400/10 blur-3xl" />
                       <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }} />
                     </div>
-                    <div className="relative z-10 px-8 py-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="relative z-10 px-5 py-5 sm:px-8 sm:py-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div>
                         <p className="text-[9px] font-black text-emerald-400/70 uppercase tracking-widest mb-1">Sierra Leone Association of Hotels</p>
                         <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-tight">
