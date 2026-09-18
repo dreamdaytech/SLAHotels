@@ -90,6 +90,11 @@ const Register: React.FC = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [activeStep, setActiveStep] = useState(1);
 
+  // Brand-new registrations submit only Account + Section A first.
+  // The hotel record is created immediately with status "pending".
+  // Sections B-F are completed later by the authenticated member.
+  const isInitialRegistration = !user && !userHotel;
+
   // Anti-Spam state
   const [honeypot, setHoneypot] = useState('');
   const [captchaAnswer, setCaptchaAnswer] = useState('');
@@ -371,7 +376,7 @@ const Register: React.FC = () => {
           type: userHotel ? 'update' : 'registration',
           text: userHotel
             ? `Hotel "${hotelName}" updated their registration details.`
-            : `New membership application submitted for "${hotelName}".`,
+            : `New pending membership registration created for "${hotelName}" — Section A received.`,
           user_id: currentUserId
         });
       } catch (_) { /* non-critical */ }
@@ -482,9 +487,9 @@ const Register: React.FC = () => {
           <div className="w-32 h-32 bg-emerald-50 text-emerald-600 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-xl shadow-emerald-900/10 mb-8">
             <CheckCircle2 size={64} />
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter">Registration Successful!</h1>
+          <h1 className="text-4xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter">Registration Received!</h1>
           <p className="text-slate-500 font-medium text-lg max-w-lg mx-auto leading-relaxed">
-            Your Official Hotel Registration Form and Member Account have been successfully created.
+            Your member account and Section A hotel identity have been saved. Your registration is now <strong className="text-amber-600">Pending</strong>. Continue to your dashboard to complete Sections B–F.
           </p>
           <div className="pt-8">
             <Link to="/dashboard" className="inline-flex items-center justify-center bg-slate-900 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-emerald-600 transition-all shadow-xl hover:shadow-emerald-900/20 hover:-translate-y-1 w-full sm:w-auto">
@@ -524,7 +529,7 @@ const Register: React.FC = () => {
         <div className="mb-8 sticky top-20 z-30">
           <div className="bg-white/90 backdrop-blur-md border border-slate-100 rounded-2xl shadow-md px-4 py-3">
             <div className="flex items-center justify-between gap-1 overflow-x-auto">
-              {FORM_STEPS.filter(s => s.id !== 1).map((step, idx, arr) => {
+              {FORM_STEPS.filter(s => s.id !== 1 && (!isInitialRegistration || s.id === 2)).map((step, idx, arr) => {
                 const stepDone =
                   step.id === 2 ? !!(hotelName && address && city && district && contactLocal) :
                     step.id === 3 ? !!(owner && manager && regNumber && year && employees) :
@@ -565,7 +570,7 @@ const Register: React.FC = () => {
                 <UserPlus className="text-emerald-600 mr-3" size={28} />
                 <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">Step 1: Create Your Account</h3>
               </div>
-              <p className="text-slate-500 text-sm mb-10 leading-relaxed font-medium">Create your SLAH member account below. Once you submit this form, your account will be created, your hotel application submitted, and you will be automatically logged in to your dashboard.</p>
+              <p className="text-slate-500 text-sm mb-10 leading-relaxed font-medium">Create your SLAH member account and complete Section A below. When you submit, your hotel registration will be saved immediately as <strong>Pending</strong> and you can complete Sections B–F later from your member dashboard.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="md:col-span-2">
@@ -737,7 +742,8 @@ const Register: React.FC = () => {
             </div>
           </section>
 
-          {/* SECTIONS B-F: Always visible — members fill all sections together */}
+          {/* SECTIONS B-F: Existing authenticated members continue the application here. */}
+          {!isInitialRegistration && (
           <div className="space-y-10">
             {/* SECTION B: Ownership & Management */}
             <section id="section-b" className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
@@ -993,6 +999,7 @@ const Register: React.FC = () => {
             </section>
 
           </div>
+          )}
 
           {/* ANTI-SPAM: Honeypot (Hidden) */}
           <div className="hidden" aria-hidden="true" style={{ display: 'none' }}>
@@ -1033,7 +1040,7 @@ const Register: React.FC = () => {
             className="w-full bg-emerald-700 text-white py-6 rounded-3xl font-black text-xl shadow-2xl hover:bg-emerald-800 transition-all transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 size={24} className="animate-spin mr-3" /> : <FileCheck size={24} className="mr-3" />}
-            {loading ? 'Submitting Application...' : (!user ? 'Register & Submit Application' : 'Update Registration Profile')}
+            {loading ? (isInitialRegistration ? 'Creating Registration...' : 'Updating Registration...') : (isInitialRegistration ? 'Create Account & Continue to Dashboard' : 'Save Registration Progress')}
           </button>
         </form>
       </div>
