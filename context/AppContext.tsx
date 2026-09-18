@@ -153,54 +153,78 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
 
         // 2. Set up Auth Listener
-        const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        // IMPORTANT: Do not await Supabase queries directly inside onAuthStateChange.
+        // Returning immediately prevents signInWithPassword() from being blocked by
+        // downstream profile/hotel queries, which previously left users on /login
+        // until a full page refresh rehydrated the session.
+        const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((event, session) => {
           if (!mounted) return;
 
+          // Reflect the authenticated session immediately so route guards can render.
           if (session?.user) {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-
-            if (!mounted) return;
-
-            if (profileData) {
-              setProfile(profileData);
-              setUserState({
-                ...session.user,
-                name: profileData.name,
-                role: profileData.role,
-                password_changed: profileData.password_changed
-              });
-            } else {
-              setUserState(session.user);
-              setProfile(null);
-            }
-
-            // Also fetch user specific hotel
-            setUserHotelLoading(true);
-            const { data: hotelData } = await supabase
-              .from('hotels')
-              .select('*')
-              .or(`user_id.eq.${session.user.id},email.eq.${session.user.email}`)
-              .maybeSingle();
-
-            if (!mounted) return;
-            setUserHotel(hotelData || null);
-            setUserHotelLoading(false);
-
-            // Re-fetch all app data now that the authenticated session JWT is active.
-            // This ensures RLS policies (e.g. is_admin()) see the correct user and
-            // return all hotels visible to this role (fixes missing pending hotel for admins).
-            await fetchAppData();
+            setUserState(prev => ({
+              ...session.user,
+              name: prev?.name ?? session.user.user_metadata?.name,
+              role: prev?.role ?? session.user.user_metadata?.role ?? 'member',
+              password_changed: prev?.password_changed ?? session.user.user_metadata?.password_changed
+            }));
           } else {
             setUserState(null);
             setProfile(null);
             setUserHotel(null);
-            // Fetch public data for logged-out state
-            await fetchAppData();
+            setUserHotelLoading(false);
           }
+
+          // Defer database work until after the auth event callback has returned.
+          setTimeout(() => {
+            void (async () => {
+              if (!mounted) return;
+
+              if (session?.user) {
+                setUserHotelLoading(true);
+
+                const [profileRes, hotelRes] = await Promise.all([
+                  supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single(),
+                  supabase
+                    .from('hotels')
+                    .select('*')
+                    .or(`user_id.eq.${session.user.id},email.eq.${session.user.email}`)
+                    .maybeSingle()
+                ]);
+
+                if (!mounted) return;
+
+                const profileData = profileRes.data;
+                if (profileData) {
+                  setProfile(profileData);
+                  setUserState({
+                    ...session.user,
+                    name: profileData.name,
+                    role: profileData.role,
+                    password_changed: profileData.password_changed
+                  });
+                } else {
+                  setProfile(null);
+                }
+
+                setUserHotel(hotelRes.data || null);
+                setUserHotelLoading(false);
+
+                // Refresh role-scoped app data after the authenticated JWT is active.
+                await fetchAppData();
+              } else {
+                await fetchAppData();
+              }
+            })().catch((error) => {
+              if (!mounted) return;
+              setUserHotelLoading(false);
+              console.error('Error processing auth state change:', error);
+            });
+          }, 0);
         });
 
         subscription = authSub;
