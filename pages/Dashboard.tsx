@@ -2275,7 +2275,7 @@ const MembersManagement = () => {
 };
 
 const UserManagement = () => {
-  const { profiles: users, loading, refreshData, showNotification } = useAppContext();
+  const { profiles: users, loading, refreshData, showNotification, user: currentUser, profile: currentProfile } = useAppContext();
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'admin' });
   const [creating, setCreating] = useState(false);
@@ -2305,7 +2305,7 @@ const UserManagement = () => {
     setConfirmModal({ isOpen: true, title, message, onConfirm, variant });
   };
 
-  const { user: currentUser } = useAppContext();
+  const isSuperAdmin = currentProfile?.role === 'super-admin';
 
   // We no longer need fetchUsers locally
 
@@ -2392,8 +2392,8 @@ const UserManagement = () => {
   const handleForcedPasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordTarget) return;
-    if (newForcedPassword.length < 6) {
-      showNotification('Password must be at least 6 characters', 'warning');
+    if (newForcedPassword.length < 8 || !/\d/.test(newForcedPassword)) {
+      showNotification('Password must be at least 8 characters and include at least one number.', 'warning');
       return;
     }
 
@@ -2439,7 +2439,7 @@ const UserManagement = () => {
   };
 
   const handleUpdateRole = async (userId: string, newRole: string) => {
-    if (currentUser?.role !== 'super-admin') {
+    if (!isSuperAdmin) {
       showNotification('Only a super administrator can change user roles.', 'error');
       return;
     }
@@ -2771,7 +2771,7 @@ const UserManagement = () => {
       )}
 
       {/* Role Management Modal */}
-      {roleTarget && currentUser?.role === 'super-admin' && (
+      {roleTarget && isSuperAdmin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setRoleTarget(null)}></div>
           <div className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 md:p-10 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
