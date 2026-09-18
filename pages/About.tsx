@@ -57,15 +57,15 @@ const coreValues = [
 
 const About: React.FC = () => {
   return (
-    <div className="pt-24 lg:pt-32 pb-24">
+    <div className="pt-20 sm:pt-24 lg:pt-32 pb-16 sm:pb-20 lg:pb-24">
       {/* Hero Header */}
-      <section className="bg-emerald-900 text-white py-20 mb-20 relative overflow-hidden">
+      <section className="bg-emerald-900 text-white py-14 sm:py-20 mb-20 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 african-accents"></div>
         <div className="container mx-auto px-4 md:px-8 relative z-10">
           <div className="max-w-3xl">
             <p className="text-emerald-300 text-xs font-black uppercase tracking-[0.2em] mb-4">Sierra Leone Association of Hotels</p>
             <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">Who We Are</h1>
-            <p className="text-xl text-emerald-100 font-light leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-emerald-100 font-light leading-relaxed">
               The national umbrella body for hotels in Sierra Leone—uniting owners, operators, and leaders under one voice to protect industry interests, raise standards, and strengthen the business environment.
             </p>
           </div>

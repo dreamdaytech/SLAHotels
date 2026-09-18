@@ -73,10 +73,10 @@ const MemberDetails: React.FC = () => {
                     {[...Array(parseInt(hotel.stars || 0))].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
                   </div>
                 </div>
-                <h1 className="text-3xl sm:text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter leading-[1.1] drop-shadow-2xl">
+                <h1 className="text-3xl min-[380px]:text-4xl sm:text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter leading-[1.1] drop-shadow-2xl">
                   {hotel.name}
                 </h1>
-                <div className="flex items-center justify-center md:justify-start text-slate-300">
+                <div className="flex items-start sm:items-center justify-center md:justify-start text-slate-300 text-sm sm:text-base">
                   <MapPin size={18} className="mr-2 text-emerald-500" />
                   {hotel.address}, {hotel.city}, {hotel.district}
                 </div>
@@ -115,7 +115,7 @@ const MemberDetails: React.FC = () => {
       </div>
 
       <div className="container mx-auto px-4 md:px-8 -mt-8 relative z-10 pb-24">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 sm:gap-10 lg:gap-12">
 
           {/* Main Info Column */}
           <div className="lg:col-span-2 space-y-12">

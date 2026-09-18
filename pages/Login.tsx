@@ -332,16 +332,16 @@ export default function Login() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 py-12">
+    <div className="min-h-[100dvh] bg-slate-50 flex flex-col items-center justify-center px-3 sm:px-4 py-8 sm:py-12">
       <Link to="/" className="mb-8 flex items-center text-slate-500 hover:text-emerald-600 transition-colors font-bold text-sm uppercase tracking-widest">
         <ChevronLeft size={20} className="mr-1" /> Back to Website
       </Link>
 
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 border border-slate-100 mb-6">
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-8 md:p-12 border border-slate-100 mb-6">
           <div className="text-center mb-10">
-            <SLAHLogo variant="dark" className="h-28 mx-auto mb-6" />
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Member Portal</h1>
+            <SLAHLogo variant="dark" className="h-20 sm:h-24 md:h-28 mx-auto mb-5 sm:mb-6" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Member Portal</h1>
             <p className="text-slate-500">Secure access for SLAH administrators and member hotels.</p>
           </div>
 

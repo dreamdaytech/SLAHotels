@@ -46,7 +46,7 @@ const industryIssues = [
 
 const Advocacy: React.FC = () => {
   return (
-    <div className="pt-24 lg:pt-32 pb-24">
+    <div className="pt-20 sm:pt-24 lg:pt-32 pb-16 sm:pb-20 lg:pb-24">
       <div className="container mx-auto px-4 md:px-8">
 
         {/* Page Header */}

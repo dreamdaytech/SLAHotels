@@ -55,9 +55,9 @@ const Secretariat: React.FC = () => {
   ];
 
   return (
-    <div className="pt-24 lg:pt-32 pb-24 bg-slate-50 min-h-screen">
+    <div className="pt-20 sm:pt-24 lg:pt-32 pb-16 sm:pb-20 lg:pb-24 bg-slate-50 min-h-screen">
       {/* Hero Header */}
-      <section className="bg-emerald-900 text-white py-24 mb-16 relative overflow-hidden African-accents">
+      <section className="bg-emerald-900 text-white py-16 sm:py-20 lg:py-24 mb-16 relative overflow-hidden African-accents">
         <div className="container mx-auto px-4 md:px-8 relative z-10">
           <div className="max-w-3xl">
             <div className="inline-flex items-center space-x-2 bg-emerald-800/50 px-4 py-2 rounded-full text-emerald-300 text-xs font-bold uppercase tracking-widest mb-6 border border-emerald-700">
@@ -65,7 +65,7 @@ const Secretariat: React.FC = () => {
               <span>SLAH Administration</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-black mb-6 uppercase tracking-tight">The Secretariat</h1>
-            <p className="text-xl text-emerald-100/80 font-medium leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-emerald-100/80 font-medium leading-relaxed">
               Meet the dedicated professionals driving the daily operations, advocacy, and service excellence of the Sierra Leone Association of Hotels.
             </p>
           </div>
@@ -74,14 +74,14 @@ const Secretariat: React.FC = () => {
 
       <div className="container mx-auto px-4 md:px-8">
         {/* Executive Leadership */}
-        <div className="mb-24">
+        <div className="mb-14 sm:mb-20 lg:mb-24">
           <div className="flex items-center space-x-4 mb-12">
             <div className="h-1 w-12 bg-amber-500"></div>
             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-widest">Executive Leadership</h2>
           </div>
 
           {executives.map((exec, idx) => (
-            <div key={idx} className="bg-white rounded-[2.5rem] overflow-hidden shadow-xl border border-slate-100 flex flex-col lg:flex-row hover:shadow-2xl transition-all duration-500 group">
+            <div key={idx} className="bg-white rounded-2xl sm:rounded-[2.5rem] overflow-hidden shadow-xl border border-slate-100 flex flex-col lg:flex-row hover:shadow-2xl transition-all duration-500 group">
               <div className="lg:w-1/3 min-h-[300px] h-full relative">
                 <img src={exec.image} alt={exec.name} className="w-full h-full absolute inset-0 object-cover object-top grayscale group-hover:grayscale-0 transition-all duration-500" />
                 <div className="absolute inset-0 bg-emerald-900/10 group-hover:bg-transparent transition-colors lg:hidden"></div>

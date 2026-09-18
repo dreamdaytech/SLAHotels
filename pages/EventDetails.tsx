@@ -140,17 +140,17 @@ END:VCALENDAR`;
             Back to Calendar
           </Link>
           <div className="max-w-5xl">
-            <div className="flex items-center space-x-4 mb-8">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
               <span className="bg-emerald-600 text-white px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl">
                 {event.category}
               </span>
               <div className="h-px w-12 bg-white/20"></div>
               <span className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em]">Official Association Event</span>
             </div>
-            <h1 className="text-5xl md:text-8xl font-black text-white leading-tight mb-10 tracking-tighter">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white leading-tight mb-10 tracking-tighter">
               {event.title}
             </h1>
-            <div className="flex flex-wrap gap-10">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4 sm:gap-6 lg:gap-10">
               <div className="flex items-center text-emerald-400">
                 <Calendar size={20} className="mr-3" />
                 <span className="font-bold text-lg">
@@ -173,17 +173,17 @@ END:VCALENDAR`;
       </section>
 
       {/* Main Content Layout */}
-      <section className="py-32 container mx-auto px-4 md:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-20">
+      <section className="py-16 sm:py-24 lg:py-32 container mx-auto px-4 md:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-20">
 
           {/* Main Info Area */}
-          <div className="lg:col-span-8 space-y-24">
+          <div className="lg:col-span-8 space-y-14 sm:space-y-20 lg:space-y-24">
 
             <div className="space-y-10">
-              <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter flex items-center">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 uppercase tracking-tighter flex items-center">
                 <Info className="mr-6 text-emerald-600" size={32} /> Overview
               </h2>
-              <div className="text-2xl text-slate-600 leading-relaxed font-light prose prose-lg max-w-none"
+              <div className="text-lg sm:text-xl lg:text-2xl text-slate-600 leading-relaxed font-light prose prose-lg max-w-none"
                 dangerouslySetInnerHTML={{ __html: event.fullContent || event.description || '' }}
               />
             </div>

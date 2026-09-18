@@ -564,11 +564,11 @@ const Register: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-10">
           {/* STEP 1: Account Authentication (Visible only if not logged in) */}
           {!user && (
-            <section className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border-2 border-emerald-500/20 relative overflow-hidden">
+            <section className="bg-white rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 shadow-xl border-2 border-emerald-500/20 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 to-emerald-700"></div>
               <div className="flex items-center mb-8 border-b border-slate-100 pb-4">
                 <UserPlus className="text-emerald-600 mr-3" size={28} />
-                <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">Step 1: Create Your Account</h3>
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-800 uppercase tracking-tight">Step 1: Create Your Account</h3>
               </div>
               <p className="text-slate-500 text-sm mb-10 leading-relaxed font-medium">Create your SLAH member account and complete Section A below. When you submit, your hotel registration will be saved immediately as <strong>Pending</strong> and you can complete Sections B–F later from your member dashboard.</p>
 
@@ -607,11 +607,11 @@ const Register: React.FC = () => {
           )}
 
           {/* SECTION A: Hotel Identity */}
-          <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+          <section className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
               <div className="flex items-center">
                 <Hotel className="text-emerald-600 mr-3" size={28} />
-                <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION A: Hotel Identity</h3>
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION A: Hotel Identity</h3>
               </div>
               {hotelName && address && city && district && contactLocal && (
                 <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full uppercase tracking-wider">
@@ -746,11 +746,11 @@ const Register: React.FC = () => {
           {!isInitialRegistration && (
           <div className="space-y-10">
             {/* SECTION B: Ownership & Management */}
-            <section id="section-b" className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+            <section id="section-b" className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
               <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
                 <div className="flex items-center">
                   <ClipboardList className="text-emerald-600 mr-3" size={28} />
-                  <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION B: Ownership &amp; Management</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION B: Ownership &amp; Management</h3>
                 </div>
                 {owner && manager && regNumber && year && employees && (
                   <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full uppercase tracking-wider">
@@ -783,11 +783,11 @@ const Register: React.FC = () => {
             </section>
 
             {/* SECTION C: Hotel Facilities & Classification */}
-            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+            <section className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
               <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
                 <div className="flex items-center">
                   <Star className="text-emerald-600 mr-3" size={28} />
-                  <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION C: Facilities &amp; Classification</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION C: Facilities &amp; Classification</h3>
                 </div>
                 {rooms && stars && (
                   <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full uppercase tracking-wider">
@@ -818,7 +818,7 @@ const Register: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-bold text-slate-600 mb-4">Room Types Available</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     {['Single', 'Double', 'Suite', 'Deluxe'].map((type) => (
                       <label key={type} className="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
                         <input type="checkbox" checked={roomTypes.includes(type)} onChange={() => toggleRoomType(type)} className="w-5 h-5 accent-emerald-600" />
@@ -830,7 +830,7 @@ const Register: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-bold text-slate-600 mb-4">In-House Facilities</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     {['Restaurant', 'Bar', 'Pool', 'Conference Room', 'Spa', 'Wi-Fi'].map((facility) => (
                       <label key={facility} className="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
                         <input type="checkbox" checked={facilities.includes(facility)} onChange={() => toggleFacility(facility)} className="w-5 h-5 accent-emerald-600" />
@@ -853,11 +853,11 @@ const Register: React.FC = () => {
             </section>
 
             {/* SECTION D: Legal & Compliance */}
-            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+            <section className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
               <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-4">
                 <div className="flex items-center">
                   <Scale className="text-emerald-600 mr-3" size={28} />
-                  <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION D: Compliance &amp; Documentation</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION D: Compliance &amp; Documentation</h3>
                 </div>
                 {tin && ntbLicense && (
                   <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full uppercase tracking-wider">
@@ -936,11 +936,11 @@ const Register: React.FC = () => {
             </section>
 
             {/* SECTION E: Commitment */}
-            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+            <section className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
               <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
                 <div className="flex items-center">
                   <FileSignature className="text-emerald-600 mr-3" size={28} />
-                  <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION E: Commitment</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION E: Commitment</h3>
                 </div>
                 {signeeName && signeePosition && (
                   <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full uppercase tracking-wider">
@@ -965,11 +965,11 @@ const Register: React.FC = () => {
             </section>
 
             {/* SECTION F: Gallery */}
-            <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100">
+            <section className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-sm border border-slate-100">
               <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
                 <div className="flex items-center">
                   <ImageIcon className="text-emerald-600 mr-3" size={28} />
-                  <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION F: Media Gallery</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-800 uppercase tracking-tight">SECTION F: Media Gallery</h3>
                 </div>
                 <span className={`text-xs font-black px-3 py-1 rounded-full ${(galleryImages.length + (userHotel?.gallery?.length || 0)) >= 10 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
                   {galleryImages.length + (userHotel?.gallery?.length || 0)} / 10 photos
@@ -981,7 +981,7 @@ const Register: React.FC = () => {
                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No photos yet — add up to 10 images</p>
                 </div>
               )}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
                 {userHotel?.gallery?.map((img: string, idx: number) => (
                   <div key={`existing-${idx}`} className="relative aspect-square rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 group">
                     <img src={img} alt="Gallery" className="w-full h-full object-cover" />
