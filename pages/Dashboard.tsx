@@ -16,6 +16,7 @@ import { SLAHLogo } from '../Logo';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
 import { isProfileComplete, createSlug, formatPhoneDisplay } from '../lib/utils';
+import { openHotelDocument } from '../lib/privateStorage';
 
 // --- Dashboard Sub-Components ---
 
@@ -394,7 +395,7 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
                           <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Open</span>
                           <Eye size={16} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
                         </div>
-                      </a>
+                      </button>
                     );
                   })}
                 </div>
@@ -459,7 +460,7 @@ const ApplicationModal = ({ app, onClose, onApprove, onReject, onSuspend, onMove
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Eye size={24} className="text-white transform scale-50 group-hover:scale-100 transition-transform" />
                   </div>
-                </a>
+                </button>
               ))}
               {(!app.gallery || app.gallery.length === 0) && (
                 <div className="col-span-full py-16 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center">
@@ -789,7 +790,7 @@ const ApplicationDetail = () => {
               {app.website && (
                 <div className="sm:col-span-2 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
                   <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-1">Website</p>
-                  <a href={app.website} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-emerald-700 hover:underline break-all">{app.website}</a>
+                  <a href={app.website} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-emerald-700 hover:underline break-all">{app.website}</button>
                 </div>
               )}
             </div>
@@ -896,7 +897,13 @@ const ApplicationDetail = () => {
                     };
                     const label = labels[key] || key.replace(/([A-Z])/g, ' $1').trim();
                     return (
-                      <a key={key} href={url as string} target="_blank" rel="noopener noreferrer"
+                      <button key={key} type="button" onClick={async () => {
+                        try {
+                          await openHotelDocument(url as string);
+                        } catch (err: any) {
+                          showNotification(err.message || 'Unable to open document.', 'error');
+                        }
+                      }}
                         className="flex items-center justify-between p-4 bg-white hover:bg-violet-50 border border-slate-100 hover:border-violet-200 rounded-2xl group transition-all">
                         <div className="flex items-center gap-4">
                           <div className="p-3 bg-violet-50 group-hover:bg-violet-100 rounded-xl transition-colors">
@@ -911,7 +918,7 @@ const ApplicationDetail = () => {
                           <span className="text-[9px] font-black text-violet-600 uppercase tracking-widest">Open</span>
                           <Eye size={14} className="text-violet-500" />
                         </div>
-                      </a>
+                      </button>
                     );
                   })}
                 </div>
@@ -961,7 +968,7 @@ const ApplicationDetail = () => {
                       <div className="absolute inset-0 bg-gradient-to-t from-rose-900/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-start p-3">
                         <span className="text-white text-[10px] font-black uppercase tracking-widest">View</span>
                       </div>
-                    </a>
+                    </button>
                   ))}
                 </div>
               ) : (
@@ -4565,7 +4572,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
         const filePath = `documents/${fileName}`;
         const { error } = await supabase.storage.from('hotel-documents').upload(filePath, file as File);
         if (error) throw error;
-        uploadedDocumentUrls[key] = supabase.storage.from('hotel-documents').getPublicUrl(filePath).data.publicUrl;
+        uploadedDocumentUrls[key] = filePath;
       }
 
       const payload = {
@@ -4780,7 +4787,7 @@ const ProfileEdit = ({ user }: { user: any }) => {
                     {(existingDocuments as any)[key] && !(newDocuments as any)[key] && (
                       <a href={(existingDocuments as any)[key]} target="_blank" rel="noopener noreferrer" className="p-2 bg-white border border-slate-200 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all" title="View document">
                         <Eye size={14} />
-                      </a>
+                      </button>
                     )}
                     {((existingDocuments as any)[key] || (newDocuments as any)[key]) && (
                       <button type="button" onClick={() => removeDocument(key)} className="p-2 bg-white border border-rose-200 text-rose-500 rounded-lg hover:bg-rose-50 transition-all" title="Remove document">
