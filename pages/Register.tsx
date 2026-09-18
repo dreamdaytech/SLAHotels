@@ -336,7 +336,7 @@ const Register: React.FC = () => {
         year_established: year ? parseInt(year) : null,
         employees: employees ? parseInt(employees) : null,
         rooms: rooms ? parseInt(rooms) : null,
-        stars: isInitialRegistration ? null : stars,
+        stars,
         room_types: roomTypes,
         facilities,
         other_amenities: otherAmenities,
@@ -354,7 +354,7 @@ const Register: React.FC = () => {
         })(),
         signee_name: signeeName,
         signee_position: signeePosition,
-        signee_date: isInitialRegistration ? null : signeeDate,
+        signee_date: signeeDate,
         user_id: currentUserId,
         status: userHotel ? userHotel.status : 'pending',
         gallery: galleryUrls.length > 0 ? [...(userHotel?.gallery || []), ...galleryUrls] : userHotel?.gallery
