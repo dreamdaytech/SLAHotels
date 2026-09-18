@@ -29,7 +29,7 @@ const NotFound: React.FC = () => {
                             <Search size={40} className="text-rose-500" />
                         </div>
 
-                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter mb-4">
+                        <h1 className="text-4xl md:text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter mb-4">
                             Page Not Found
                         </h1>
                         <p className="text-slate-500 font-medium text-lg leading-relaxed mb-10">
