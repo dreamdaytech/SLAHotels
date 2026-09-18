@@ -106,17 +106,17 @@ const Members: React.FC = () => {
   };
 
   return (
-    <div className="pt-32 lg:pt-40 pb-32">
+    <div className="pt-24 sm:pt-28 lg:pt-40 pb-20 sm:pb-24 lg:pb-32">
 
       {/* ── PAGE HEADER ─────────────────────────────────────────────────── */}
       <div className="container mx-auto px-4 md:px-8 mb-16">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
           <div>
             <p className="text-emerald-600 text-xs font-black uppercase tracking-[0.25em] mb-3">Sierra Leone Association of Hotels</p>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 tracking-tighter leading-none">
+            <h1 className="text-3xl min-[380px]:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 tracking-tighter leading-none">
               Member <span className="text-emerald-600">Directory</span>
             </h1>
-            <p className="text-slate-500 text-lg mt-4 max-w-xl leading-relaxed">
+            <p className="text-slate-500 text-base sm:text-lg mt-4 max-w-xl leading-relaxed">
               Sierra Leone's certified and SLAH-verified hotels — from intimate boutiques to large-scale properties.
             </p>
           </div>
@@ -133,7 +133,7 @@ const Members: React.FC = () => {
 
       {/* ── CONTROLS BAR ─────────────────────────────────────────────────── */}
       <div className="container mx-auto px-4 md:px-8 mb-10">
-        <div className="bg-white rounded-[2.5rem] p-4 lg:p-5 shadow-xl border border-slate-100">
+        <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-4 lg:p-5 shadow-xl border border-slate-100">
           <div className="flex flex-col lg:flex-row gap-4 items-stretch">
             {/* Search */}
             <div className="flex-grow relative group">
