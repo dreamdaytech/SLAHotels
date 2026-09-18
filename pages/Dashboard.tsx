@@ -1195,27 +1195,80 @@ const ActionDropdown = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const [openDirection, setOpenDirection] = useState<'up' | 'down'>('down');
   const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  const openMenu = () => {
-    if (!btnRef.current) return;
+  const positionMenu = () => {
+    if (!btnRef.current || !menuRef.current) return;
+
     const rect = btnRef.current.getBoundingClientRect();
-    const menuWidth = 224; // w-56
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const openUpward = spaceBelow < 280;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const edge = 8;
+    const gap = 8;
+    const menuWidth = Math.min(224, viewportWidth - edge * 2);
 
+    // Measure the rendered panel instead of relying on a fixed height estimate.
+    const measuredHeight = menuRef.current.scrollHeight;
+    const maxAvailableHeight = Math.max(160, viewportHeight - edge * 2);
+    const menuHeight = Math.min(measuredHeight, maxAvailableHeight);
+
+    const spaceBelow = viewportHeight - rect.bottom - gap - edge;
+    const spaceAbove = rect.top - gap - edge;
+    const shouldOpenUp =
+      (spaceBelow < menuHeight && spaceAbove > spaceBelow) ||
+      (spaceBelow < 160 && spaceAbove > 160);
+
+    const preferredLeft =
+      align === 'right'
+        ? rect.right - menuWidth
+        : rect.left;
+    const left = Math.min(
+      Math.max(preferredLeft, edge),
+      Math.max(edge, viewportWidth - menuWidth - edge)
+    );
+
+    const rawTop = shouldOpenUp
+      ? rect.top - gap - menuHeight
+      : rect.bottom + gap;
+    const top = Math.min(
+      Math.max(rawTop, edge),
+      Math.max(edge, viewportHeight - menuHeight - edge)
+    );
+
+    setOpenDirection(shouldOpenUp ? 'up' : 'down');
     setMenuStyle({
       position: 'fixed',
+      left,
+      top,
       width: menuWidth,
-      ...(align === 'right'
-        ? { right: window.innerWidth - rect.right }
-        : { left: rect.left }),
-      ...(openUpward
-        ? { bottom: window.innerHeight - rect.top + 8 }
-        : { top: rect.bottom + 8 })
+      maxHeight: maxAvailableHeight,
+      overflowY: measuredHeight > maxAvailableHeight ? 'auto' : 'visible'
     });
+  };
+
+  const openMenu = () => {
     setIsOpen(true);
   };
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Wait until the menu exists in the DOM, then measure its true dimensions.
+    const frame = window.requestAnimationFrame(positionMenu);
+
+    const handleViewportChange = () => positionMenu();
+    window.addEventListener('resize', handleViewportChange);
+    // Capture scrolling from the table container as well as the window.
+    window.addEventListener('scroll', handleViewportChange, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange, true);
+    };
+  }, [isOpen, actions.length, align]);
 
   const variantClass = (variant?: string) => {
     if (variant === 'danger') return 'text-rose-600 hover:bg-rose-50 hover:text-rose-700';
@@ -1228,49 +1281,56 @@ const ActionDropdown = ({
     <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
       <button
         ref={btnRef}
+        type="button"
         onClick={openMenu}
         className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
       >
         <MoreVertical size={20} />
       </button>
 
       {isOpen && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 z-[60]"
             onClick={() => setIsOpen(false)}
           />
-          {/* Panel */}
           <div
+            ref={menuRef}
+            role="menu"
             style={menuStyle}
-            className="bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 py-4 z-[70] animate-in fade-in zoom-in-95 duration-200 origin-top-right ring-8 ring-white"
+            className={`bg-white rounded-2xl sm:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 py-3 sm:py-4 z-[70] animate-in fade-in zoom-in-95 duration-150 ring-4 sm:ring-8 ring-white ${openDirection === 'up' ? 'origin-bottom-right' : 'origin-top-right'}`}
           >
-            <div className="px-6 pb-3 border-b border-slate-50 mb-2">
+            <div className="px-4 sm:px-6 pb-3 border-b border-slate-50 mb-2">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
             </div>
 
             {actions.map((action, idx) => (
               <button
                 key={idx}
+                type="button"
+                role="menuitem"
                 disabled={action.disabled}
                 onClick={() => {
                   action.onClick();
                   setIsOpen(false);
                 }}
-                className={`w-full px-6 py-4 text-left text-xs font-bold flex items-center transition-all group disabled:opacity-40 disabled:cursor-not-allowed ${variantClass(action.variant)}`}
+                className={`w-full px-4 sm:px-6 py-3.5 sm:py-4 text-left text-xs font-bold flex items-center transition-all group disabled:opacity-40 disabled:cursor-not-allowed ${variantClass(action.variant)}`}
               >
                 {action.icon && (
                   <span className="mr-3 shrink-0">{action.icon}</span>
                 )}
-                {action.label}
+                <span className="min-w-0 break-words">{action.label}</span>
               </button>
             ))}
 
-            <div className="mt-2 px-4">
+            <div className="mt-2 px-3 sm:px-4">
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
-                className="w-full py-2 bg-slate-50 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-100 transition-colors"
+                className="w-full py-2.5 bg-slate-50 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-100 transition-colors"
               >
                 Close Menu
               </button>
@@ -1281,7 +1341,6 @@ const ActionDropdown = ({
     </div>
   );
 };
-
 
 const Applications = () => {
   const { hotels: rawHotels, refreshData, showNotification } = useAppContext();
