@@ -1167,7 +1167,7 @@ const ConfirmationModal = ({
             {cancelText}
           </button>
           <button
-            onClick={() => { onConfirm(); onClose(); }}
+            onClick={() => { onClose(); onConfirm(); }}
             className={`flex-1 px-8 py-4 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg ${theme.button}`}
           >
             {confirmText}
